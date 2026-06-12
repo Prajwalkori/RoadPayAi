@@ -1,0 +1,345 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}System Settings - RoadPay AI{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y" style="display: flex; flex-direction: column; gap: 32px; text-align: left;">
+    
+    <!-- Header Block -->
+    <div>
+        <span class="section-tag">System Control</span>
+        <h2 class="section-title">Secure Integration Settings</h2>
+        <p class="section-desc">Configure API credentials, verify connection handlers, advance mock server time, and seed demo databases.</p>
+    </div>
+
+    <!-- Bento Settings Grid -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 32px; @media (min-width: 992px) { grid-template-columns: 7fr 5fr; }">
+        
+        <!-- API Configuration Form -->
+        <div class="glass-panel" style="padding: 28px; background: var(--card-bg); display: flex; flex-direction: column; gap: 24px;">
+            <div>
+                <h3 style="font-size: 16px; font-weight: 800;"><i data-lucide="shield-alert" style="color: var(--primary); vertical-align: middle; margin-right: 6px;"></i> Credentials Configuration</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Changes are stored securely in SQLite settings record. Fields starting with *** will not overwrite unless updated.</p>
+            </div>
+            
+            <form id="settings-form" style="display: flex; flex-direction: column; gap: 20px;">
+                
+                <!-- Gemini Segment -->
+                <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+                    <span style="font-size: 10px; font-weight: 800; color: var(--info); text-transform: uppercase; display: block; margin-bottom: 4px;">Groq Llama Inference</span>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; margin-top: 4px;">
+                        Uses <strong>meta-llama/llama-4-scout-17b-16e-instruct</strong> model (500k tokens/day quota) for OCR text recognition, safety violation detection, and educational quizzes.
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">Groq API Key</label>
+                        <div class="input-wrapper">
+                            <i data-lucide="brain"></i>
+                            <input type="password" id="set-gemini-key" class="form-input" placeholder="Enter Groq Llama API Key" style="padding: 10px 12px 10px 38px; font-size: 12px;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SMTP Segment -->
+                <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+                    <span style="font-size: 10px; font-weight: 800; color: var(--warning); text-transform: uppercase; display: block; margin-bottom: 12px;">SMTP Mail Dispatcher</span>
+                    <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 16px; margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">SMTP Host Server</label>
+                            <input type="text" id="set-smtp-host" class="form-input" placeholder="smtp.gmail.com" style="padding: 10px 12px; font-size: 12px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Port</label>
+                            <input type="number" id="set-smtp-port" class="form-input" placeholder="587" style="padding: 10px 12px; font-size: 12px;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" id="set-smtp-user" class="form-input" placeholder="email@gmail.com" style="padding: 10px 12px; font-size: 12px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="set-smtp-pass" class="form-input" placeholder="App-Specific Password" style="padding: 10px 12px; font-size: 12px;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Razorpay Segment -->
+                <div>
+                    <span style="font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; display: block; margin-bottom: 12px;">Razorpay Gateway</span>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Key ID</label>
+                            <input type="text" id="set-razor-key" class="form-input" placeholder="rzp_test_..." style="padding: 10px 12px; font-size: 12px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Secret Key</label>
+                            <input type="password" id="set-razor-secret" class="form-input" placeholder="Secret Token" style="padding: 10px 12px; font-size: 12px;">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="save-settings-btn" class="btn-card btn-card-primary" style="margin-top: 12px; width: 100%; padding: 12px;">
+                    Save System Settings
+                </button>
+            </form>
+        </div>
+
+        <!-- Diagnostics & Simulator -->
+        <div style="display: flex; flex-direction: column; gap: 32px;">
+            
+            <!-- Secure API Diagnostics -->
+            <div class="glass-panel" style="padding: 28px; background: var(--card-bg);">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 15px; font-weight: 800;">Secure API Diagnostics</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); mt-4px;">Run latency tests on external third-party service connections.</p>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    
+                    <!-- Gemini Diagnostic -->
+                    <div class="diagnostic-row" style="display: flex; align-items: center; justify-content: space-between; background: var(--background); border-radius: 12px; padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="brain" style="color: var(--info); width: 20px; height: 20px;"></i>
+                            <div>
+                                <span style="font-size: 12px; font-weight: 700; display: block;">Groq Inference</span>
+                                <span id="gemini-status-lbl" style="font-size: 9px; color: var(--text-secondary);">Untested</span>
+                            </div>
+                        </div>
+                        <button onclick="testGemini()" id="test-gemini-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;">Test</button>
+                    </div>
+
+                    <!-- SMTP Diagnostic -->
+                    <div class="diagnostic-row" style="display: flex; align-items: center; justify-content: space-between; background: var(--background); border-radius: 12px; padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="mail" style="color: var(--warning); width: 20px; height: 20px;"></i>
+                            <div>
+                                <span style="font-size: 12px; font-weight: 700; display: block;">SMTP Gateway</span>
+                                <span id="smtp-status-lbl" style="font-size: 9px; color: var(--text-secondary);">Untested</span>
+                            </div>
+                        </div>
+                        <button onclick="testSmtp()" id="test-smtp-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;">Test</button>
+                    </div>
+
+                    <!-- Razorpay Diagnostic -->
+                    <div class="diagnostic-row" style="display: flex; align-items: center; justify-content: space-between; background: var(--background); border-radius: 12px; padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="credit-card" style="color: var(--primary); width: 20px; height: 20px;"></i>
+                            <div>
+                                <span style="font-size: 12px; font-weight: 700; display: block;">Razorpay Client</span>
+                                <span id="razor-status-lbl" style="font-size: 9px; color: var(--text-secondary);">Untested</span>
+                            </div>
+                        </div>
+                        <button onclick="testRazorpay()" id="test-razorpay-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;">Test</button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Demo Sandbox Simulator console -->
+            <div class="glass-panel" style="padding: 28px; background: var(--card-bg); display: flex; flex-direction: column; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 15px; font-weight: 800;">Developer Demo Simulator</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); mt-4px;">Alter server database entries artificially to test chronologies.</p>
+                </div>
+
+                <!-- Time warp -->
+                <div style="background: var(--background); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <span style="font-size: 9px; font-weight: 800; color: var(--primary); text-transform: uppercase;">Chronological Time-Warp</span>
+                    <form id="timewarp-form" style="display: flex; gap: 12px;">
+                        <input type="number" id="warp-days" class="form-input" min="1" max="90" required value="7" style="padding: 10px; font-size: 12px; text-align: center; max-width: 80px;">
+                        <button type="submit" id="warp-btn" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px; padding: 10px 14px;">
+                            <i data-lucide="clock"></i> Advance Date ({{ warp_days }} Days)
+                        </button>
+                    </form>
+                    <p style="font-size: 9px; color: var(--text-secondary);">Subtracts registration timestamps on SQLite records to simulate pending overdue limits (late penalties auto-apply).</p>
+                </div>
+
+                <!-- Database Seeder -->
+                <div style="background: var(--background); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <span style="font-size: 9px; font-weight: 800; color: var(--success); text-transform: uppercase;">Database Seeder</span>
+                    <button onclick="seedDatabase()" id="seed-btn" class="btn-card btn-card-secondary" style="width: 100%; font-size: 11px; padding: 12px;">
+                        <i data-lucide="database"></i> Seed Mock Registry & Challans
+                    </button>
+                    <p style="font-size: 9px; color: var(--text-secondary);">Wipes registry logs and adds demo accounts, vehicles, helmet infractions, wrong directions, and quiz modules.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        loadSettings();
+
+        // Save settings submission
+        document.getElementById("settings-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById("save-settings-btn");
+            saveBtn.disabled = true;
+            saveBtn.innerText = "Saving Settings...";
+
+            const payload = {
+                gemini_api_key: document.getElementById("set-gemini-key").value,
+                smtp_host: document.getElementById("set-smtp-host").value,
+                smtp_port: parseInt(document.getElementById("set-smtp-port").value) || null,
+                smtp_username: document.getElementById("set-smtp-user").value,
+                smtp_password: document.getElementById("set-smtp-pass").value,
+                razorpay_key_id: document.getElementById("set-razor-key").value,
+                razorpay_secret: document.getElementById("set-razor-secret").value
+            };
+
+            try {
+                await apiRequest("/api/settings/save", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                alert("Settings saved successfully.");
+                loadSettings();
+            } catch (err) {
+                alert(err.message || "Failed to save settings.");
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Save System Settings";
+            }
+        });
+
+        // Time warp submission
+        document.getElementById("timewarp-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const warpBtn = document.getElementById("warp-btn");
+            warpBtn.disabled = true;
+            warpBtn.innerText = "Advancing Time...";
+
+            const days = document.getElementById("warp-days").value;
+            const formData = new FormData();
+            formData.append("days", days);
+
+            try {
+                const res = await apiRequest("/api/violations/simulate-days", {
+                    method: "POST",
+                    body: formData
+                });
+                alert(`Advanced server time by ${days} days! Penalties calculated.`);
+            } catch (err) {
+                alert(err.message || "Failed to warp time.");
+            } finally {
+                warpBtn.disabled = false;
+                warpBtn.innerText = "Advance Date";
+            }
+        });
+    });
+
+    async function loadSettings() {
+        try {
+            const data = await apiRequest("/api/settings");
+            
+            document.getElementById("set-gemini-key").value = data.gemini_api_key || "";
+            document.getElementById("set-smtp-host").value = data.smtp_host || "";
+            document.getElementById("set-smtp-port").value = data.smtp_port || 587;
+            document.getElementById("set-smtp-user").value = data.smtp_username || "";
+            document.getElementById("set-smtp-pass").value = data.smtp_password || "";
+            document.getElementById("set-razor-key").value = data.razorpay_key_id || "";
+            document.getElementById("set-razor-secret").value = data.razorpay_secret || "";
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function testGemini() {
+        const btn = document.getElementById("test-gemini-btn");
+        const lbl = document.getElementById("gemini-status-lbl");
+        btn.disabled = true;
+        btn.innerText = "Testing...";
+        lbl.innerText = "Connecting...";
+        lbl.style.color = "var(--text-secondary)";
+
+        try {
+            const res = await apiRequest("/api/settings/test-gemini", {
+                method: "POST"
+            });
+            lbl.innerText = "Passed successfully";
+            lbl.style.color = "var(--success)";
+        } catch (err) {
+            lbl.innerText = "Connection failed";
+            lbl.style.color = "var(--primary)";
+            alert(err.message || "Groq Test Failed.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Test";
+        }
+    }
+
+    async function testSmtp() {
+        const btn = document.getElementById("test-smtp-btn");
+        const lbl = document.getElementById("smtp-status-lbl");
+        btn.disabled = true;
+        btn.innerText = "Testing...";
+        lbl.innerText = "Connecting...";
+        lbl.style.color = "var(--text-secondary)";
+
+        try {
+            const res = await apiRequest("/api/settings/test-smtp", {
+                method: "POST"
+            });
+            lbl.innerText = "Passed successfully";
+            lbl.style.color = "var(--success)";
+        } catch (err) {
+            lbl.innerText = "Connection failed";
+            lbl.style.color = "var(--primary)";
+            alert(err.message || "SMTP Test Failed.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Test";
+        }
+    }
+
+    async function testRazorpay() {
+        const btn = document.getElementById("test-razorpay-btn");
+        const lbl = document.getElementById("razor-status-lbl");
+        btn.disabled = true;
+        btn.innerText = "Testing...";
+        lbl.innerText = "Connecting...";
+        lbl.style.color = "var(--text-secondary)";
+
+        try {
+            const res = await apiRequest("/api/settings/test-razorpay", {
+                method: "POST"
+            });
+            lbl.innerText = "Passed successfully";
+            lbl.style.color = "var(--success)";
+        } catch (err) {
+            lbl.innerText = "Connection failed";
+            lbl.style.color = "var(--primary)";
+            alert(err.message || "Razorpay Test Failed.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Test";
+        }
+    }
+
+    async function seedDatabase() {
+        if (!confirm("Are you sure you want to seed the database with mock records?")) return;
+
+        const btn = document.getElementById("seed-btn");
+        btn.disabled = true;
+        btn.innerText = "Seeding Database...";
+
+        try {
+            const res = await apiRequest("/api/settings/seed-mock-data", {
+                method: "POST"
+            });
+            alert("Mock database seeded successfully! Ready for citizen demo.");
+        } catch (err) {
+            alert(err.message || "Seeding failed.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Seed Mock Registry & Challans";
+        }
+    }
+</script>
+{% endblock %}

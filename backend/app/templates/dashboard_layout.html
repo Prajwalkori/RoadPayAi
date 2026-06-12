@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block layout %}
+<div class="dashboard-wrapper">
+    
+    <!-- Top Sticky Navigation -->
+    <header class="sticky-header" style="z-index: 100;">
+        <div class="container-max header-inner">
+            <div class="flex-align" style="display: flex; align-items: center; gap: 12px;">
+                <!-- Responsive Menu Toggle -->
+                <button onclick="toggleSidebar()" class="btn-icon md-only" style="display: none; padding: 6px;">
+                    <i data-lucide="menu"></i>
+                </button>
+                <a href="/dashboard" class="brand">
+                    <i data-lucide="brain-circuit"></i>
+                    <span>RoadPay AI Portal</span>
+                </a>
+            </div>
+            
+            <div class="header-actions">
+                <button onclick="toggleTheme()" class="btn-icon" title="Toggle Theme">
+                    <i data-lucide="sun" class="light-icon" style="display: none;"></i>
+                    <i data-lucide="moon" class="dark-icon" style="display: none;"></i>
+                </button>
+                
+                <div class="profile-card">
+                    <div class="avatar">
+                        {{ user.name[0] | uppercase if user and user.name else "U" }}
+                    </div>
+                    <div class="details">
+                        <span class="name">{{ user.name }}</span>
+                        <span class="role">{{ user.role.replace('_', ' ') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar-drawer">
+            <div class="sidebar-menu">
+                {% if user.role == "ADMIN" %}
+                <a href="/dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+                    <i data-lucide="trending-up"></i>
+                    <span>System Overview</span>
+                </a>
+                <a href="/dashboard/violations" class="sidebar-link {% if request.url.path == '/dashboard/violations' %}active{% endif %}">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>Violations Feed</span>
+                </a>
+                <a href="/dashboard/registry" class="sidebar-link {% if request.url.path == '/dashboard/registry' %}active{% endif %}">
+                    <i data-lucide="car"></i>
+                    <span>Vehicle Registry</span>
+                </a>
+                <a href="/dashboard/users" class="sidebar-link {% if request.url.path == '/dashboard/users' %}active{% endif %}">
+                    <i data-lucide="user-check"></i>
+                    <span>User Accounts</span>
+                </a>
+                <a href="/dashboard/settings" class="sidebar-link {% if request.url.path == '/dashboard/settings' %}active{% endif %}">
+                    <i data-lucide="shield"></i>
+                    <span>Secure Settings</span>
+                </a>
+                {% elif user.role == "TRAFFIC_OFFICER" %}
+                <a href="/dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+                    <i data-lucide="camera"></i>
+                    <span>Traffic Camera</span>
+                </a>
+                <a href="/dashboard/violations" class="sidebar-link {% if request.url.path == '/dashboard/violations' %}active{% endif %}">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>Violations Feed</span>
+                </a>
+                <a href="/dashboard/registry" class="sidebar-link {% if request.url.path == '/dashboard/registry' %}active{% endif %}">
+                    <i data-lucide="car"></i>
+                    <span>Registry Lookup</span>
+                </a>
+                {% elif user.role == "VEHICLE_OWNER" %}
+                <a href="/dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+                    <i data-lucide="trending-up"></i>
+                    <span>Citizen Dashboard</span>
+                </a>
+                <a href="/dashboard/violations" class="sidebar-link {% if request.url.path == '/dashboard/violations' %}active{% endif %}">
+                    <i data-lucide="file-spreadsheet"></i>
+                    <span>Pending Challans</span>
+                </a>
+                <a href="/dashboard/learning" class="sidebar-link {% if request.url.path == '/dashboard/learning' %}active{% endif %}">
+                    <i data-lucide="award"></i>
+                    <span>Learning Center</span>
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="sidebar-footer">
+                <a href="/logout" class="sidebar-link" style="color: var(--primary); background: rgba(244,63,94,0.02); border: 1px dashed rgba(244,63,94,0.15)">
+                    <i data-lucide="lock"></i>
+                    <span>Sign Out</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Viewport -->
+        <main class="dashboard-main-content">
+            {% block dashboard_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<style>
+    /* Styling overrides for active navigation icon toggle */
+    html.dark .dark-icon { display: none !important; }
+    html.dark .light-icon { display: block !important; }
+    html:not(.dark) .dark-icon { display: block !important; }
+    html:not(.dark) .light-icon { display: none !important; }
+    
+    @media (max-width: 992px) {
+        .md-only { display: flex !important; }
+    }
+</style>
+{% endblock %}

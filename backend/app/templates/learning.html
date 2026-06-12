@@ -1,0 +1,435 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Learning Center - RoadPay AI{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y" style="display: flex; flex-direction: column; gap: 32px; text-align: left;">
+    
+    <!-- Header Block -->
+    <div>
+        <span class="section-tag">Safety Classroom</span>
+        <h2 class="section-title">Safety & Education Center</h2>
+        <p class="section-desc">Complete interactive scenarios to refresh safe driving skills and earn up to **20% fine reduction** instantly.</p>
+    </div>
+
+    <!-- Active Violation Selection / Verification -->
+    <div id="learning-selector-card" class="glass-panel" style="padding: 28px; display: none;">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+                <h3 style="font-size: 15px; font-weight: 800;"><i data-lucide="award" style="color: var(--primary); vertical-align: middle; margin-right: 6px;"></i> Select Pending Challan for Safety Quiz</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Select an outstanding challan from your registered vehicles below to start the classroom module.</p>
+            </div>
+            
+            <select id="quiz-challan-selector" class="form-input" style="padding: 12px; font-size: 12px; appearance: auto; background-image: none; font-family: monospace;">
+                <!-- Filled dynamically with pending violations -->
+            </select>
+            
+            <button onclick="startQuizFromSelector()" class="btn-card btn-card-primary" style="align-self: flex-start; padding: 12px 24px;">
+                Start Safety Quiz
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Quiz State -->
+    <div id="quiz-loading" class="flex-align" style="display: none; align-items: center; justify-content: center; min-height: 250px; gap: 8px;">
+        <i data-lucide="loader" class="animate-spin text-rose-500"></i>
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);" id="quiz-loading-text">Generating customized AI Safety Module...</span>
+    </div>
+
+    <!-- QUIZ INTERACTIVE VIEWPORT -->
+    <div id="quiz-viewport" class="glass-panel" style="padding: 32px; display: none; background: var(--card-bg);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px;">
+            <div>
+                <span class="badge-tag" id="quiz-violation-tag">HELMET_VIOLATION</span>
+                <h3 style="font-size: 18px; font-weight: 800; margin-top: 8px;" id="quiz-module-title">Safe Driving Evaluation</h3>
+            </div>
+            <div style="font-family: monospace; font-size: 11px; font-weight: 800; color: var(--text-secondary);">
+                Progress: <span id="quiz-progress-index" style="color: var(--primary);">1</span>/<span id="quiz-progress-total">5</span>
+            </div>
+        </div>
+
+        <!-- Progress Indicator Bar -->
+        <div style="height: 4px; background: var(--hover-bg); border-radius: 2px; margin-bottom: 32px; overflow: hidden;">
+            <div id="quiz-progress-bar" style="height: 100%; width: 20%; background: var(--primary); transition: width 0.3s ease;"></div>
+        </div>
+
+        <div id="question-card" class="space-y" style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Scenario Narrative -->
+            <div style="background: var(--background); padding: 20px; border-radius: 16px; border-left: 4px solid var(--info);">
+                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--info); letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Road Safety Scenario</span>
+                <p id="question-scenario" style="font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1.5;"></p>
+            </div>
+
+            <!-- Question text -->
+            <div>
+                <h4 id="question-text" style="font-size: 15px; font-weight: 800;"></h4>
+            </div>
+
+            <!-- Options Grid -->
+            <div id="question-options" style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                <!-- Button card choices filled dynamically -->
+            </div>
+
+            <!-- Actions Row -->
+            <div style="display: flex; justify-content: space-between; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                <button id="quiz-back-btn" onclick="previousQuestion()" class="btn-card btn-card-secondary" style="padding: 10px 20px; font-size: 11px;">
+                    <i data-lucide="chevron-left"></i> Previous
+                </button>
+                <button id="quiz-next-btn" onclick="nextQuestion()" class="btn-card btn-card-primary" style="padding: 10px 20px; font-size: 11px;">
+                    Next Question <i data-lucide="chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTS REPORT CARD -->
+    <div id="quiz-results" class="glass-panel" style="padding: 32px; display: none; background: var(--card-bg);">
+        <div style="text-align: center; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; align-items: center;">
+            
+            <div id="results-badge-container" style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(16,185,129,0.08); border: 2px solid var(--success); color: var(--success);">
+                <i data-lucide="award" style="width: 44px; height: 44px; stroke-width: 1.5;"></i>
+            </div>
+            
+            <div>
+                <h2 style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px;" id="results-title">Safety Certification Approved</h2>
+                <p id="results-desc" style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">You scored 90% on the classroom module. Settle your pending fine with safe driver discounts.</p>
+            </div>
+
+            <!-- Status variables -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%;">
+                <div class="glass-panel" style="padding: 16px; text-align: center; background: var(--background); border-radius: 16px; border: none;">
+                    <span style="font-size: 9px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Discount Granted</span>
+                    <h3 id="results-discount-value" style="font-size: 20px; font-weight: 800; color: var(--success); font-family: monospace; mt-4px;">₹100.00</h3>
+                </div>
+                <div class="glass-panel" style="padding: 16px; text-align: center; background: var(--background); border-radius: 16px; border: none;">
+                    <span style="font-size: 9px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Final Reduced Fine</span>
+                    <h3 id="results-final-fine" style="font-size: 20px; font-weight: 800; color: var(--primary); font-family: monospace; mt-4px;">₹400.00</h3>
+                </div>
+            </div>
+
+            <!-- Certificate Code Box -->
+            <div id="results-certificate-box" style="display: none; background: linear-gradient(135deg, rgba(16,185,129,0.03) 0%, rgba(16,185,129,0.08) 100%); border: 1px dashed rgba(16,185,129,0.25); border-radius: 16px; padding: 16px; width: 100%; text-align: left;">
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <i data-lucide="shield-check" style="color: var(--success); width: 24px; height: 24px;"></i>
+                    <div>
+                        <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--success);">Digital Safe Driver License Issued</span>
+                        <strong id="results-certificate-code" style="font-family: monospace; font-size: 13px; color: var(--text-primary); display: block; margin-top: 2px;">RPCERT-XXXX</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Answers Review list -->
+            <div style="width: 100%; text-align: left; margin-top: 16px;">
+                <h4 style="font-size: 13px; font-weight: 800; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px;">Detailed Evaluation Review</h4>
+                <div id="results-answers-review" style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; width: 100%; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                <button id="results-retry-btn" onclick="retryQuiz()" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                    <i data-lucide="refresh-cw"></i> Retry Evaluation
+                </button>
+                <a href="/dashboard/violations" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px; text-decoration: none;">
+                    <i data-lucide="credit-card"></i> Pay & Resolve Fine
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .option-card {
+        border: 1px solid var(--border-color);
+        background: var(--background);
+        border-radius: 14px;
+        padding: 14px 18px;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        font-size: 12px;
+        color: var(--text-primary);
+        font-weight: 700;
+        outline: none;
+    }
+    .option-card:hover {
+        border-color: var(--card-hover-border);
+        background: var(--hover-bg);
+        transform: translateX(4px);
+    }
+    .option-card.selected {
+        border-color: var(--primary);
+        background: rgba(244,63,94,0.03);
+        box-shadow: 0 0 0 1px var(--primary);
+        color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeViolationId = null;
+    let quizQuestions = [];
+    let currentQuestionIdx = 0;
+    let selectedAnswers = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Parse violation_id from query URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlViolationId = urlParams.get("violation_id");
+
+        if (urlViolationId) {
+            activeViolationId = parseInt(urlViolationId);
+            loadQuizQuestions(activeViolationId);
+        } else {
+            // Load pending violations list for user selection
+            loadPendingViolationsSelector();
+        }
+    });
+
+    async function loadPendingViolationsSelector() {
+        const selectorCard = document.getElementById("learning-selector-card");
+        const select = document.getElementById("quiz-challan-selector");
+        
+        try {
+            const data = await apiRequest("/api/violations?status_filter=PENDING");
+            // Also load OVERDUE
+            const dataOverdue = await apiRequest("/api/violations?status_filter=OVERDUE");
+            
+            const list = [...(data.violations || []), ...(dataOverdue.violations || [])];
+            
+            if (list.length === 0) {
+                select.innerHTML = `<option value="">No pending challans found.</option>`;
+                document.getElementById("quiz-challan-selector").disabled = true;
+            } else {
+                select.innerHTML = list.map(v => `
+                    <option value="${v.id}">${v.challan_id} (${v.vehicle_number}) - ${v.violation_type.replace('_', ' ')} [Base: ₹${v.base_amount}]</option>
+                `).join("");
+            }
+            
+            selectorCard.style.display = "block";
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function startQuizFromSelector() {
+        const select = document.getElementById("quiz-challan-selector");
+        if (!select.value) {
+            alert("No pending challan selected.");
+            return;
+        }
+        activeViolationId = parseInt(select.value);
+        document.getElementById("learning-selector-card").style.display = "none";
+        loadQuizQuestions(activeViolationId);
+    }
+
+    async function loadQuizQuestions(violationId) {
+        const loading = document.getElementById("quiz-loading");
+        const viewport = document.getElementById("quiz-viewport");
+        const results = document.getElementById("quiz-results");
+
+        loading.style.display = "flex";
+        viewport.style.display = "none";
+        results.style.display = "none";
+
+        try {
+            const data = await apiRequest(`/api/learning/module?violation_id=${violationId}`);
+            quizQuestions = data.questions;
+            
+            document.getElementById("quiz-violation-tag").innerText = data.violation_type.replace('_', ' ');
+            document.getElementById("quiz-progress-total").innerText = quizQuestions.length;
+            
+            currentQuestionIdx = 0;
+            selectedAnswers = new Array(quizQuestions.length).fill(null);
+            
+            displayQuestion();
+            viewport.style.display = "block";
+        } catch (err) {
+            alert(err.message || "Failed to load safety module quiz questions.");
+            loadPendingViolationsSelector();
+        } finally {
+            loading.style.display = "none";
+        }
+    }
+
+    function displayQuestion() {
+        const q = quizQuestions[currentQuestionIdx];
+        
+        document.getElementById("quiz-progress-index").innerText = currentQuestionIdx + 1;
+        
+        const percent = ((currentQuestionIdx + 1) / quizQuestions.length) * 100;
+        document.getElementById("quiz-progress-bar").style.width = `${percent}%`;
+
+        document.getElementById("question-scenario").innerText = q.scenario;
+        document.getElementById("question-text").innerText = q.question;
+
+        const optionsContainer = document.getElementById("question-options");
+        optionsContainer.innerHTML = "";
+
+        q.options.forEach((opt, idx) => {
+            const btn = document.createElement("button");
+            btn.className = `option-card ${selectedAnswers[currentQuestionIdx] === idx ? 'selected' : ''}`;
+            btn.innerHTML = `
+                <span style="font-family: monospace; font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">${String.fromCharCode(65 + idx)}</span>
+                <span>${opt}</span>
+            `;
+            btn.onclick = () => selectOption(idx);
+            optionsContainer.appendChild(btn);
+        });
+
+        // Toggle back button
+        document.getElementById("quiz-back-btn").style.visibility = currentQuestionIdx === 0 ? "hidden" : "visible";
+        
+        // Handle next button title
+        const nextBtn = document.getElementById("quiz-next-btn");
+        if (currentQuestionIdx === quizQuestions.length - 1) {
+            nextBtn.innerHTML = `Evaluate Quiz <i data-lucide="check-circle"></i>`;
+        } else {
+            nextBtn.innerHTML = `Next Question <i data-lucide="chevron-right"></i>`;
+        }
+        
+        lucide.createIcons();
+    }
+
+    function selectOption(idx) {
+        selectedAnswers[currentQuestionIdx] = idx;
+        const options = document.querySelectorAll("#question-options .option-card");
+        options.forEach((opt, i) => {
+            if (i === idx) {
+                opt.classList.add("selected");
+            } else {
+                opt.classList.remove("selected");
+            }
+        });
+    }
+
+    function previousQuestion() {
+        if (currentQuestionIdx > 0) {
+            currentQuestionIdx--;
+            displayQuestion();
+        }
+    }
+
+    async function nextQuestion() {
+        if (selectedAnswers[currentQuestionIdx] === null) {
+            alert("Please select one of the driving answers before proceeding.");
+            return;
+        }
+
+        if (currentQuestionIdx < quizQuestions.length - 1) {
+            currentQuestionIdx++;
+            displayQuestion();
+        } else {
+            // Evaluate and submit answers to server
+            submitQuizAnswers();
+        }
+    }
+
+    async function submitQuizAnswers() {
+        const loading = document.getElementById("quiz-loading");
+        const viewport = document.getElementById("quiz-viewport");
+        const results = document.getElementById("quiz-results");
+
+        document.getElementById("quiz-loading-text").innerText = "Evaluating quiz submission and generating safe driving certificate...";
+        loading.style.display = "flex";
+        viewport.style.display = "none";
+
+        try {
+            const response = await apiRequest("/api/learning/submit", {
+                method: "POST",
+                body: JSON.stringify({
+                    violation_id: activeViolationId,
+                    answers: selectedAnswers
+                })
+            });
+
+            // Set result layout variables
+            const badge = document.getElementById("results-badge-container");
+            const title = document.getElementById("results-title");
+            const desc = document.getElementById("results-desc");
+            const certBox = document.getElementById("results-certificate-box");
+            
+            document.getElementById("results-discount-value").innerText = `₹${response.discount_earned}.00`;
+            document.getElementById("results-final-fine").innerText = `₹${response.final_amount}.00`;
+
+            if (response.passed) {
+                badge.style.borderColor = "var(--success)";
+                badge.style.color = "var(--success)";
+                badge.style.background = "rgba(16,185,129,0.08)";
+                title.innerText = "Safety Evaluation Approved";
+                title.style.color = "var(--text-primary)";
+                desc.innerHTML = `Awesome Job! You scored **${response.score}%** on the safety classroom module and earned **₹${response.discount_earned} off** your fine invoice!`;
+                
+                if (response.certificate_code) {
+                    document.getElementById("results-certificate-code").innerText = response.certificate_code;
+                    certBox.style.display = "block";
+                }
+            } else {
+                badge.style.borderColor = "var(--primary)";
+                badge.style.color = "var(--primary)";
+                badge.style.background = "rgba(244,63,94,0.08)";
+                title.innerText = "Evaluation Failed (Score < 80%)";
+                title.style.color = "var(--primary)";
+                desc.innerHTML = `You scored **${response.score}%** (passing grade requires 80%). Review details and try again to save on your challan.`;
+                certBox.style.display = "none";
+            }
+
+            // Populate answers review details
+            const reviewList = document.getElementById("results-answers-review");
+            reviewList.innerHTML = "";
+
+            response.detailed_results.forEach((r, idx) => {
+                const isCorrect = r.is_correct;
+                const statusIcon = isCorrect ? "check-circle" : "x-circle";
+                const statusColor = isCorrect ? "var(--success)" : "var(--primary)";
+                
+                const item = document.createElement("div");
+                item.style.border = "1px solid var(--border-color)";
+                item.style.borderRadius = "14px";
+                item.style.padding = "16px";
+                item.style.background = "var(--background)";
+                item.innerHTML = `
+                    <div style="display: flex; gap: 8px; align-items: start;">
+                        <i data-lucide="${statusIcon}" style="color: ${statusColor}; width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;"></i>
+                        <div>
+                            <strong style="font-size: 12px; display: block; color: var(--text-primary);">${r.question}</strong>
+                            <span style="font-size: 11px; display: block; color: var(--text-secondary); margin-top: 8px;">
+                                Selected: <strong style="color: ${statusColor}">${r.options[r.selected_index]}</strong>
+                            </span>
+                            ${!isCorrect ? `
+                            <span style="font-size: 11px; display: block; color: var(--text-secondary); margin-top: 4px;">
+                                Correct answer: <strong style="color: var(--success)">${r.options[r.correct_index]}</strong>
+                            </span>` : ''}
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 8px; line-height: 1.4;">
+                                <strong>Safety explanation:</strong> ${r.explanation}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                reviewList.appendChild(item);
+            });
+
+            // Handle retry button display state
+            document.getElementById("results-retry-btn").style.display = response.passed ? "none" : "block";
+
+            results.style.display = "block";
+        } catch (err) {
+            alert(err.message || "Failed to submit quiz answers.");
+            viewport.style.display = "block";
+        } finally {
+            loading.style.display = "none";
+            lucide.createIcons();
+        }
+    }
+
+    function retryQuiz() {
+        loadQuizQuestions(activeViolationId);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,563 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Violations Feed - RoadPay AI{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y" style="display: flex; flex-direction: column; gap: 32px; text-align: left;">
+    
+    <!-- Header Block -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <span class="section-tag">Infractions List</span>
+            <h2 class="section-title">Violations Feed</h2>
+            <p class="section-desc">Search, review details, download PDF invoices, and settle outstanding traffic challans.</p>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="glass-panel" style="padding: 20px; background: var(--card-bg);">
+        <form id="filters-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 100px; gap: 16px; align-items: end;">
+            <div class="form-group">
+                <label class="form-label" style="font-size: 9px;">Vehicle Plate Number</label>
+                <div class="input-wrapper">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="filter-plate" class="form-input" placeholder="e.g. MH12AB1234" style="padding: 10px 12px 10px 38px; font-size: 12px;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" style="font-size: 9px;">Violation Type</label>
+                <select id="filter-type" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="">All Types</option>
+                    <option value="HELMET_VIOLATION">Helmet Violation</option>
+                    <option value="TRIPLE_RIDING">Triple Riding</option>
+                    <option value="WRONG_DIRECTION">Wrong Direction</option>
+                    <option value="SPEEDING">Speeding</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="font-size: 9px;">Status</label>
+                <select id="filter-status" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="">All Statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PAID">Paid</option>
+                    <option value="OVERDUE">Overdue</option>
+                    <option value="UNASSIGNED">Unassigned</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-card btn-card-primary" style="padding: 11px; height: 38px; font-size: 11px;">
+                <i data-lucide="filter"></i> Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Loading / Empty / Spreadsheet Table States -->
+    <div id="violations-loading" class="flex-align" style="display: flex; align-items: center; justify-content: center; min-height: 200px; gap: 8px;">
+        <i data-lucide="loader" class="animate-spin text-rose-500"></i>
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Loading violations records...</span>
+    </div>
+
+    <div id="violations-empty" style="display: none; text-align: center; padding: 64px 24px; border: 1px dashed var(--border-color); border-radius: 24px;">
+        <i data-lucide="file-text" style="width: 44px; height: 44px; stroke-width: 1.5; color: var(--text-tertiary); margin: 0 auto 16px;"></i>
+        <h4 style="font-size: 14px; font-weight: 800; color: var(--text-secondary);">No violations found</h4>
+        <p style="font-size: 11px; color: var(--text-tertiary); max-width: 280px; margin: 8px auto 0;">Try adjusting your filters or database settings seeder config parameters.</p>
+    </div>
+
+    <div id="violations-content" class="space-y" style="display: none;">
+        <div class="table-wrapper">
+            <table class="spreadsheet" id="violations-table">
+                <thead>
+                    <tr>
+                        <th>Challan ID</th>
+                        <th>Vehicle Plate</th>
+                        <th>Infraction Type</th>
+                        <th>Base Fine</th>
+                        <th>Penalties</th>
+                        <th>Final Amount</th>
+                        <th>Status</th>
+                        <th>Issued Date</th>
+                        <th style="text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="flex-align" style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px;">
+            <div style="font-size: 11px; color: var(--text-secondary);">
+                Showing page <span id="current-page-num" style="font-weight: 700;">1</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="prev-page-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;"><i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev</button>
+                <button id="next-page-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;">Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- DETAILS MODAL -->
+<div class="modal-overlay" id="details-modal" style="z-index: 500;">
+    <div class="modal-card" style="max-width: 600px; width: 90%; background: var(--card-bg);">
+        <div class="modal-header">
+            <h4 style="font-size: 15px; font-weight: 800;"><i data-lucide="file-spreadsheet" style="color: var(--primary); vertical-align: middle; margin-right: 6px;"></i> Challan Details</h4>
+            <button onclick="closeDetailsModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body space-y" style="padding: 24px; text-align: left; display: flex; flex-direction: column; gap: 20px;">
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; @media (min-width: 576px) { grid-template-cols: 1fr 1fr; }">
+                <!-- Image evidence -->
+                <div id="modal-evidence-container" style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); height: 180px; background: #111; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <img id="modal-evidence-img" src="" alt="Evidence snapshot" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div id="modal-evidence-missing" style="display: none; color: var(--text-tertiary); font-size: 11px; flex-direction: column; align-items: center; gap: 8px;">
+                        <i data-lucide="image-off" style="width: 24px; height: 24px;"></i>
+                        <span>No image evidence recorded.</span>
+                    </div>
+                </div>
+                
+                <!-- Core parameters -->
+                <div style="font-family: monospace; font-size: 11px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                        <span>CHALLAN ID:</span>
+                        <span id="modal-challan-id" style="font-weight: 800;">RP-XXXX</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                        <span>VEHICLE PLATE:</span>
+                        <span id="modal-plate" style="font-weight: 800;">MH12AB1234</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                        <span>INFRACTION:</span>
+                        <span id="modal-type" style="font-weight: 800; text-transform: uppercase;">HELMET_VIOLATION</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                        <span>ISSUED ON:</span>
+                        <span id="modal-date">2026-06-11</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                        <span>DUE DATE:</span>
+                        <span id="modal-due" style="color: var(--warning);">2026-06-18</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                        <span>STATUS:</span>
+                        <span id="modal-status" style="font-weight: 800;">PENDING</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fine breakdown card -->
+            <div style="background: var(--background); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span style="color: var(--text-secondary);">Base Fine:</span>
+                    <span id="modal-base-amount" style="font-family: monospace; font-weight: 700;">₹500.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span style="color: var(--text-secondary);">Late Penalties:</span>
+                    <span id="modal-late-penalty" style="font-family: monospace; font-weight: 700; color: var(--primary);">+ ₹0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span style="color: var(--text-secondary);">Safety Quiz Discount:</span>
+                    <span id="modal-discount" style="font-family: monospace; font-weight: 700; color: var(--success);">- ₹0.00</span>
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 6px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                    <span>Final Amount:</span>
+                    <span id="modal-final-amount" style="font-family: monospace; color: var(--primary);">₹500.00</span>
+                </div>
+            </div>
+
+            <!-- Explanation / AI feedback -->
+            <div style="text-align: left;">
+                <h5 style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">AI Infraction Narrative</h5>
+                <p id="modal-explanation" style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 6px;"></p>
+            </div>
+
+            <!-- Owner interactive block -->
+            <div id="modal-owner-actions" style="display: none; flex-direction: column; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <div id="quiz-benefit-alert" class="alert-box alert-success" style="display: flex; gap: 10px; border-radius: 12px; padding: 12px; font-size: 11px;">
+                    <i data-lucide="award" style="width: 18px; height: 18px; color: var(--success); flex-shrink: 0;"></i>
+                    <span>Take the corrective road safety classroom module quiz to instantly earn up to **20% off** your base fine before payment settlement!</span>
+                </div>
+                <div style="display: flex; gap: 12px; width: 100%;">
+                    <a id="modal-quiz-btn" href="" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                        <i data-lucide="award" style="color: var(--success);"></i> Start Safety Course
+                    </a>
+                    <button id="modal-pay-btn" onclick="initiatePayment()" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px;">
+                        <i data-lucide="credit-card"></i> Pay Direct Fines
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin unassigned plate resolution -->
+            <div id="modal-admin-assign" style="display: none; flex-direction: column; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <h5 style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Resolve Plate Number Registry</h5>
+                <form id="assign-plate-form" style="display: flex; gap: 12px;">
+                    <input type="text" id="assign-plate-input" class="form-input" placeholder="Enter vehicle plate" required style="padding: 10px; font-size: 12px; font-family: monospace; font-weight: 800; text-transform: uppercase;">
+                    <button type="submit" class="btn-card btn-card-primary" style="padding: 10px 18px; font-size: 11px; font-shrink: 0;">
+                        Assign Owner
+                    </button>
+                </form>
+            </div>
+
+            <div id="modal-pdf-download-container" style="display: none; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <a id="modal-pdf-link" href="" target="_blank" class="btn-card btn-card-secondary" style="width: 100%; font-size: 11px;">
+                    <i data-lucide="download"></i> Download E-Challan PDF
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- UPI SIMULATION / RAZORPAY MOCK MODAL -->
+<div class="modal-overlay" id="pay-modal" style="z-index: 600;">
+    <div class="modal-card" style="max-width: 400px; width: 90%; background: var(--background);">
+        <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+            <div class="brand">
+                <i data-lucide="brain-circuit"></i>
+                <span>RoadPay UPI Gateway</span>
+            </div>
+            <button onclick="closePayModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 20px;">
+            <div>
+                <span class="section-tag" style="margin-bottom: 4px;">Merchant: RoadPay AI Gate</span>
+                <h3 style="font-size: 18px; font-weight: 900;">Complete UPI Settlement</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); mt-4px;">Scan QR using any UPI app or click simulate to settle instantly.</p>
+            </div>
+
+            <div class="glass-panel" style="background: white; padding: 24px; display: inline-flex; justify-content: center; align-items: center; border-radius: 20px; width: 220px; height: 220px; margin: 0 auto; box-shadow: var(--card-shadow);">
+                <!-- Simulated QR code -->
+                <div id="upi-qr-placeholder" style="background: radial-gradient(circle, #f43f5e 10%, #000 70%); width: 100%; height: 100%; border-radius: 8px; opacity: 0.15; position: relative;">
+                    <!-- A neat visual QR code mockup -->
+                </div>
+                <div style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                    <i data-lucide="qr-code" style="width: 72px; height: 72px; color: #1d1d1f; stroke-width: 1.5;"></i>
+                    <span style="font-family: monospace; font-size: 10px; font-weight: 800; color: #1d1d1f;">₹<span id="pay-modal-amount">500.00</span></span>
+                </div>
+            </div>
+
+            <div style="font-family: monospace; font-size: 10px; background: rgba(0,0,0,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 4px;">
+                <div><span>TXN ORDER:</span> <strong id="pay-modal-order-id">order_mock_xxx</strong></div>
+                <div><span>CHALLAN ID:</span> <strong id="pay-modal-challan">RP-XXXX</strong></div>
+            </div>
+
+            <button onclick="confirmSimulationPayment()" id="confirm-pay-btn" class="btn-card btn-card-primary" style="width: 100%; padding: 14px;">
+                Simulate Successful Settlement
+            </button>
+            <p style="font-size: 9px; color: var(--text-tertiary);">This simulates the Razorpay/UPI callback and registers payment updates in SQLite.</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const userRole = "{{ user.role }}";
+    let currentPage = 1;
+    const limit = 10;
+    let selectedViolation = null;
+    let paymentOrderDetails = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadViolations();
+        
+        // Handle filter form submission
+        document.getElementById("filters-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            currentPage = 1;
+            loadViolations();
+        });
+
+        // Handle pagination buttons
+        document.getElementById("prev-page-btn").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadViolations();
+            }
+        });
+
+        document.getElementById("next-page-btn").addEventListener("click", () => {
+            currentPage++;
+            loadViolations();
+        });
+
+        // Handle Assign Plate Form
+        document.getElementById("assign-plate-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const plate = document.getElementById("assign-plate-input").value;
+            if (!selectedViolation || !plate) return;
+
+            const submitBtn = e.target.querySelector("button[type='submit']");
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Assigning...";
+
+            try {
+                const formData = new FormData();
+                formData.append("vehicle_number", plate);
+
+                await apiRequest(`/api/violations/${selectedViolation.id}/assign`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                alert("Violation successfully assigned to " + plate.toUpperCase());
+                closeDetailsModal();
+                loadViolations();
+            } catch (err) {
+                alert(err.message || "Failed to assign violation.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Assign Owner";
+            }
+        });
+    });
+
+    async function loadViolations() {
+        const loading = document.getElementById("violations-loading");
+        const empty = document.getElementById("violations-empty");
+        const content = document.getElementById("violations-content");
+        
+        loading.style.display = "flex";
+        empty.style.display = "none";
+        content.style.display = "none";
+
+        const plate = document.getElementById("filter-plate").value;
+        const type = document.getElementById("filter-type").value;
+        const status = document.getElementById("filter-status").value;
+
+        let url = `/api/violations?page=${currentPage}&limit=${limit}`;
+        if (plate) url += `&vehicle_number=${encodeURIComponent(plate)}`;
+        if (type) url += `&violation_type=${encodeURIComponent(type)}`;
+        if (status) url += `&status_filter=${encodeURIComponent(status)}`;
+
+        try {
+            const data = await apiRequest(url);
+            
+            const tbody = document.querySelector("#violations-table tbody");
+            tbody.innerHTML = "";
+
+            if (data.violations && data.violations.length > 0) {
+                data.violations.forEach(v => {
+                    const dateStr = new Date(v.timestamp).toLocaleDateString();
+                    const statusClass = v.status === "PAID" ? "status-paid" : (v.status === "OVERDUE" ? "status-overdue" : (v.status === "UNASSIGNED" ? "status-overdue" : "status-pending"));
+                    
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><strong style="font-family: monospace; font-size: 11px;">${v.challan_id}</strong></td>
+                        <td><strong style="font-family: monospace; font-size: 13px;">${v.vehicle_number}</strong></td>
+                        <td><span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${v.violation_type.replace('_', ' ')}</span></td>
+                        <td style="font-family: monospace;">₹${v.base_amount}.00</td>
+                        <td style="font-family: monospace; color: var(--primary);">+₹${v.late_penalty}.00</td>
+                        <td style="font-family: monospace; font-weight: 700;">₹${v.final_amount}.00</td>
+                        <td><span class="badge-status ${statusClass}">${v.status}</span></td>
+                        <td>${dateStr}</td>
+                        <td style="text-align: center;">
+                            <button onclick="openDetailsModal(${v.id})" class="btn-icon" style="padding: 4px 8px; display: inline-flex; gap: 4px; font-size: 10px; font-weight: 700;">
+                                <i data-lucide="eye" style="width: 12px; height: 12px;"></i> View
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById("current-page-num").innerText = currentPage;
+                document.getElementById("prev-page-btn").disabled = currentPage === 1;
+                document.getElementById("next-page-btn").disabled = (currentPage * limit) >= data.total;
+
+                content.style.display = "block";
+            } else {
+                empty.style.display = "block";
+            }
+        } catch (err) {
+            console.error(err);
+            empty.style.display = "block";
+        } finally {
+            loading.style.display = "none";
+            lucide.createIcons();
+        }
+    }
+
+    async function openDetailsModal(violationId) {
+        try {
+            const v = await apiRequest(`/api/violations/${violationId}`);
+            selectedViolation = v;
+
+            document.getElementById("modal-challan-id").innerText = v.challan_id;
+            document.getElementById("modal-plate").innerText = v.vehicle_number;
+            document.getElementById("modal-type").innerText = v.violation_type.replace('_', ' ');
+            document.getElementById("modal-date").innerText = new Date(v.timestamp).toLocaleString();
+            document.getElementById("modal-due").innerText = new Date(v.due_date).toLocaleDateString();
+            
+            const statusBadge = document.getElementById("modal-status");
+            statusBadge.innerText = v.status;
+            statusBadge.className = v.status === "PAID" ? "badge-status status-paid" : (v.status === "OVERDUE" ? "badge-status status-overdue" : "badge-status status-pending");
+
+            document.getElementById("modal-base-amount").innerText = `₹${v.base_amount}.00`;
+            document.getElementById("modal-late-penalty").innerText = `+ ₹${v.late_penalty}.00`;
+            document.getElementById("modal-discount").innerText = `- ₹${v.discount_earned}.00`;
+            document.getElementById("modal-final-amount").innerText = `₹${v.final_amount}.00`;
+            document.getElementById("modal-explanation").innerText = v.explanation || "No explanation provided.";
+
+            // Handle Image preview
+            const img = document.getElementById("modal-evidence-img");
+            const missing = document.getElementById("modal-evidence-missing");
+            if (v.violation_image_path) {
+                // Parse standard static folder routing
+                img.src = `/uploads/${v.violation_image_path.split('/').pop()}`;
+                img.style.display = "block";
+                missing.style.display = "none";
+            } else {
+                img.style.display = "none";
+                missing.style.display = "flex";
+            }
+
+            // Interactive panels visibility
+            const ownerActions = document.getElementById("modal-owner-actions");
+            const adminAssign = document.getElementById("modal-admin-assign");
+            const pdfContainer = document.getElementById("modal-pdf-download-container");
+
+            ownerActions.style.display = "none";
+            adminAssign.style.display = "none";
+            pdfContainer.style.display = "none";
+
+            if (userRole === "VEHICLE_OWNER" && v.status !== "PAID" && v.status !== "UNASSIGNED") {
+                ownerActions.style.display = "flex";
+                document.getElementById("modal-quiz-btn").href = `/dashboard/learning?violation_id=${v.id}`;
+            }
+
+            if (userRole === "ADMIN" && v.status === "UNASSIGNED") {
+                adminAssign.style.display = "flex";
+                document.getElementById("assign-plate-input").value = "";
+            }
+
+            if (v.status === "PAID" || (v.status !== "UNASSIGNED" && (userRole === "ADMIN" || userRole === "TRAFFIC_OFFICER"))) {
+                pdfContainer.style.display = "block";
+                document.getElementById("modal-pdf-link").href = `/challans/challan_${v.challan_id}.pdf`;
+            }
+
+            document.getElementById("details-modal").classList.add("open");
+            lucide.createIcons();
+        } catch (err) {
+            alert(err.message || "Failed to load challan details.");
+        }
+    }
+
+    function closeDetailsModal() {
+        document.getElementById("details-modal").classList.remove("open");
+        selectedViolation = null;
+    }
+
+    async function initiatePayment() {
+        if (!selectedViolation) return;
+
+        const payBtn = document.getElementById("modal-pay-btn");
+        payBtn.disabled = true;
+        payBtn.innerText = "Creating Checkout...";
+
+        try {
+            // Call backend order generation
+            const orderDetails = await apiRequest(`/api/payments/create-order?violation_id=${selectedViolation.id}`, {
+                method: "POST"
+            });
+            paymentOrderDetails = orderDetails;
+
+            if (orderDetails.mode === "simulation") {
+                // Open Simulation payment overlay
+                document.getElementById("pay-modal-amount").innerText = `${orderDetails.amount}.00`;
+                document.getElementById("pay-modal-order-id").innerText = orderDetails.order_id;
+                document.getElementById("pay-modal-challan").innerText = selectedViolation.challan_id;
+                
+                document.getElementById("pay-modal").classList.add("open");
+            } else {
+                // Run Razorpay real Checkout
+                var options = {
+                    "key": orderDetails.key_id,
+                    "amount": orderDetails.amount * 100, // paise
+                    "currency": "INR",
+                    "name": "RoadPay AI",
+                    "description": "E-Challan Settle: " + selectedViolation.challan_id,
+                    "order_id": orderDetails.order_id,
+                    "handler": async function (response) {
+                        try {
+                            const verifyRes = await apiRequest("/api/payments/verify", {
+                                method: "POST",
+                                body: JSON.stringify({
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    violation_id: selectedViolation.id
+                                })
+                            });
+                            alert("Payment Successful & Settled!");
+                            closeDetailsModal();
+                            loadViolations();
+                        } catch (err) {
+                            alert(err.message || "Payment verification failed.");
+                        }
+                    },
+                    "prefill": {
+                        "name": "Citizen Owner",
+                        "email": "owner@roadpay.ai"
+                    },
+                    "theme": {
+                        "color": "#f43f5e"
+                    }
+                };
+                var rzp = new Razorpay(options);
+                rzp.open();
+            }
+        } catch (err) {
+            alert(err.message || "Order creation failed.");
+        } finally {
+            payBtn.disabled = false;
+            payBtn.innerText = "Pay Direct Fines";
+        }
+    }
+
+    function closePayModal() {
+        document.getElementById("pay-modal").classList.remove("open");
+        paymentOrderDetails = null;
+    }
+
+    async function confirmSimulationPayment() {
+        if (!selectedViolation || !paymentOrderDetails) return;
+
+        const confirmBtn = document.getElementById("confirm-pay-btn");
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "Verifying Transaction...";
+
+        try {
+            const mockPaymentId = "pay_sim_" + Math.random().toString(36).substring(2, 14);
+            const mockSignature = "sig_sim_" + Math.random().toString(36).substring(2, 14);
+
+            await apiRequest("/api/payments/verify", {
+                method: "POST",
+                body: JSON.stringify({
+                    razorpay_payment_id: mockPaymentId,
+                    razorpay_order_id: paymentOrderDetails.order_id,
+                    razorpay_signature: mockSignature,
+                    violation_id: selectedViolation.id
+                })
+            });
+
+            alert("Simulation Settle Passed successfully! Payment has been recorded.");
+            closePayModal();
+            closeDetailsModal();
+            loadViolations();
+        } catch (err) {
+            alert(err.message || "Simulation settle failed.");
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = "Simulate Successful Settlement";
+        }
+    }
+</script>
+{% endblock %}

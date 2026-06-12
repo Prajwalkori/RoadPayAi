@@ -1,0 +1,458 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Vehicle Registry - RoadPay AI{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y" style="display: flex; flex-direction: column; gap: 32px; text-align: left;">
+    
+    <!-- Header Block -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <span class="section-tag">Database Records</span>
+            <h2 class="section-title">Vehicle Registry</h2>
+            <p class="section-desc">Manage vehicle number plates, citizen owner alignments, contact details, and database records.</p>
+        </div>
+        
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/api/vehicles/export" class="btn-card btn-card-secondary" style="font-size: 11px; text-decoration: none; padding: 10px 16px;">
+                <i data-lucide="download"></i> Export CSV
+            </a>
+            <button onclick="openImportModal()" class="btn-card btn-card-secondary" style="font-size: 11px; padding: 10px 16px;">
+                <i data-lucide="upload-cloud"></i> Import CSV
+            </button>
+            {% if user.role == "ADMIN" %}
+            <button onclick="openAddModal()" class="btn-card btn-card-primary" style="font-size: 11px; padding: 10px 16px;">
+                <i data-lucide="plus"></i> Register Vehicle
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="glass-panel" style="padding: 20px; background: var(--card-bg);">
+        <form id="filters-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 100px; gap: 16px; align-items: end;">
+            <div class="form-group">
+                <label class="form-label" style="font-size: 9px;">Search Query</label>
+                <div class="input-wrapper">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="filter-search" class="form-input" placeholder="Plate, Name, Email, Phone..." style="padding: 10px 12px 10px 38px; font-size: 12px;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" style="font-size: 9px;">Vehicle Type</label>
+                <select id="filter-type" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="">All Types</option>
+                    <option value="MOTORCYCLE">Motorcycle</option>
+                    <option value="CAR">Car</option>
+                    <option value="TRUCK">Truck</option>
+                    <option value="BUS">Bus</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="font-size: 9px;">Status</label>
+                <select id="filter-status" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="">All Statuses</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-card btn-card-primary" style="padding: 11px; height: 38px; font-size: 11px;">
+                <i data-lucide="filter"></i> Search
+            </button>
+        </form>
+    </div>
+
+    <!-- Loading / Empty / Spreadsheet Table States -->
+    <div id="registry-loading" class="flex-align" style="display: flex; align-items: center; justify-content: center; min-height: 200px; gap: 8px;">
+        <i data-lucide="loader" class="animate-spin text-rose-500"></i>
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Loading vehicle records...</span>
+    </div>
+
+    <div id="registry-empty" style="display: none; text-align: center; padding: 64px 24px; border: 1px dashed var(--border-color); border-radius: 24px;">
+        <i data-lucide="car" style="width: 44px; height: 44px; stroke-width: 1.5; color: var(--text-tertiary); margin: 0 auto 16px;"></i>
+        <h4 style="font-size: 14px; font-weight: 800; color: var(--text-secondary);">No vehicles registered</h4>
+        <p style="font-size: 11px; color: var(--text-tertiary); max-width: 280px; margin: 8px auto 0;">Add records manually or upload a CSV containing vehicles database lists.</p>
+    </div>
+
+    <div id="registry-content" class="space-y" style="display: none;">
+        <div class="table-wrapper">
+            <table class="spreadsheet" id="registry-table">
+                <thead>
+                    <tr>
+                        <th>Vehicle Plate</th>
+                        <th>Owner Name</th>
+                        <th>Owner Email</th>
+                        <th>Phone Number</th>
+                        <th>Vehicle Type</th>
+                        <th>Registered Date</th>
+                        <th>Status</th>
+                        {% if user.role == "ADMIN" %}
+                        <th style="text-align: center;">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="flex-align" style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px;">
+            <div style="font-size: 11px; color: var(--text-secondary);">
+                Showing page <span id="current-page-num" style="font-weight: 700;">1</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="prev-page-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;"><i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Prev</button>
+                <button id="next-page-btn" class="btn-icon" style="padding: 6px 12px; font-size: 11px; font-weight: 700;">Next <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ADD/EDIT VEHICLE MODAL -->
+{% if user.role == "ADMIN" %}
+<div class="modal-overlay" id="vehicle-modal" style="z-index: 500;">
+    <div class="modal-card" style="max-width: 500px; width: 90%; background: var(--card-bg);">
+        <div class="modal-header">
+            <h4 style="font-size: 15px; font-weight: 800;" id="modal-title">Register New Vehicle</h4>
+            <button onclick="closeVehicleModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <form id="vehicle-form" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; text-align: left;">
+            <div class="form-group">
+                <label class="form-label">Vehicle Plate Number</label>
+                <input type="text" id="v-plate" class="form-input" placeholder="e.g. MH12AB1234" required style="padding: 10px 12px 10px 12px; font-size: 12px; font-family: monospace; font-weight: 800; text-transform: uppercase;">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Owner Name</label>
+                <input type="text" id="v-owner" class="form-input" placeholder="Citizen Full Name" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Owner Email Address</label>
+                <input type="email" id="v-email" class="form-input" placeholder="email@domain.com" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" id="v-phone" class="form-input" placeholder="10-digit Phone" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vehicle Category</label>
+                    <select id="v-type" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                        <option value="MOTORCYCLE">Motorcycle</option>
+                        <option value="CAR">Car</option>
+                        <option value="TRUCK">Truck</option>
+                        <option value="BUS">Bus</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Registered Address</label>
+                <textarea id="v-address" class="form-input" placeholder="Residential/Business address" style="padding: 10px 12px 10px 12px; font-size: 12px; height: 64px; resize: none;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="v-status" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 8px;">
+                <button type="button" onclick="closeVehicleModal()" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                    Cancel
+                </button>
+                <button type="submit" id="v-submit-btn" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px;">
+                    Save Record
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- IMPORT CSV MODAL -->
+<div class="modal-overlay" id="import-modal" style="z-index: 500;">
+    <div class="modal-card" style="max-width: 440px; width: 90%; background: var(--card-bg);">
+        <div class="modal-header">
+            <h4 style="font-size: 15px; font-weight: 800;">Bulk Import Vehicle Registrations</h4>
+            <button onclick="closeImportModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <form id="import-form" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; text-align: left;">
+            <div>
+                <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Select a `.csv` file containing vehicle lists matching database columns format header:</p>
+                <code style="font-family: monospace; font-size: 9px; padding: 6px; background: rgba(0,0,0,0.03); border: 1px solid var(--border-color); border-radius: 6px; display: block; margin-top: 8px; overflow-x: auto;">
+                    vehicle_number,owner_name,email,phone,address,vehicle_type,registration_date,status
+                </code>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">CSV File</label>
+                <input type="file" id="csv-file" accept=".csv" required style="width: 100%; font-size: 12px; border: 1px dashed var(--border-color); padding: 24px; border-radius: 12px; background: var(--background); cursor: pointer; text-align: center;">
+            </div>
+
+            <div style="display: flex; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 8px;">
+                <button type="button" onclick="closeImportModal()" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                    Cancel
+                </button>
+                <button type="submit" id="import-submit-btn" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px;">
+                    Upload & Import
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const userRole = "{{ user.role }}";
+    let currentPage = 1;
+    const limit = 10;
+    let editingVehicleId = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadVehicles();
+
+        // Handle filter form submission
+        document.getElementById("filters-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            currentPage = 1;
+            loadVehicles();
+        });
+
+        // Handle pagination buttons
+        document.getElementById("prev-page-btn").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadVehicles();
+            }
+        });
+
+        document.getElementById("next-page-btn").addEventListener("click", () => {
+            currentPage++;
+            loadVehicles();
+        });
+
+        // Handle Add/Edit Form submission
+        const vForm = document.getElementById("vehicle-form");
+        if (vForm) {
+            vForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                
+                const submitBtn = document.getElementById("v-submit-btn");
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Saving...";
+
+                const payload = {
+                    vehicle_number: document.getElementById("v-plate").value,
+                    owner_name: document.getElementById("v-owner").value,
+                    email: document.getElementById("v-email").value,
+                    phone: document.getElementById("v-phone").value,
+                    address: document.getElementById("v-address").value,
+                    vehicle_type: document.getElementById("v-type").value,
+                    status: document.getElementById("v-status").value
+                };
+
+                try {
+                    if (editingVehicleId) {
+                        await apiRequest(`/api/vehicles/${editingVehicleId}`, {
+                            method: "PUT",
+                            body: JSON.stringify(payload)
+                        });
+                        alert("Vehicle record updated successfully.");
+                    } else {
+                        await apiRequest("/api/vehicles", {
+                            method: "POST",
+                            body: JSON.stringify(payload)
+                        });
+                        alert("Vehicle registered successfully.");
+                    }
+
+                    closeVehicleModal();
+                    loadVehicles();
+                } catch (err) {
+                    alert(err.message || "Failed to save vehicle record.");
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "Save Record";
+                }
+            });
+        }
+
+        // Handle CSV import submission
+        document.getElementById("import-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const files = document.getElementById("csv-file").files;
+            if (!files || files.length === 0) return;
+
+            const submitBtn = document.getElementById("import-submit-btn");
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Importing Records...";
+
+            const file = files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await apiRequest("/api/vehicles/import", {
+                    method: "POST",
+                    body: formData
+                });
+
+                alert(`CSV Import Finished! Success: ${res.success}, Failed: ${res.failed}`);
+                if (res.errors && res.errors.length > 0) {
+                    console.error("CSV Import Errors:", res.errors);
+                }
+                closeImportModal();
+                loadVehicles();
+            } catch (err) {
+                alert(err.message || "CSV Import failed.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Upload & Import";
+            }
+        });
+    });
+
+    async function loadVehicles() {
+        const loading = document.getElementById("registry-loading");
+        const empty = document.getElementById("registry-empty");
+        const content = document.getElementById("registry-content");
+
+        loading.style.display = "flex";
+        empty.style.display = "none";
+        content.style.display = "none";
+
+        const search = document.getElementById("filter-search").value;
+        const type = document.getElementById("filter-type").value;
+        const status = document.getElementById("filter-status").value;
+
+        let url = `/api/vehicles?page=${currentPage}&limit=${limit}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (type) url += `&vehicle_type=${encodeURIComponent(type)}`;
+        if (status) url += `&status_filter=${encodeURIComponent(status)}`;
+
+        try {
+            const data = await apiRequest(url);
+
+            const tbody = document.querySelector("#registry-table tbody");
+            tbody.innerHTML = "";
+
+            if (data.vehicles && data.vehicles.length > 0) {
+                data.vehicles.forEach(v => {
+                    const regDate = v.registration_date ? new Date(v.registration_date).toLocaleDateString() : "N/A";
+                    const statusClass = v.status === "ACTIVE" ? "status-paid" : "status-overdue";
+                    
+                    const tr = document.createElement("tr");
+                    let actionsHtml = "";
+                    if (userRole === "ADMIN") {
+                        actionsHtml = `
+                            <td style="text-align: center; display: flex; justify-content: center; gap: 8px;">
+                                <button onclick="openEditModal(${JSON.stringify(v).replace(/"/g, '&quot;')})" class="btn-icon" style="padding: 4px;" title="Edit Vehicle"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i></button>
+                                <button onclick="deleteVehicle(${v.id})" class="btn-icon" style="padding: 4px; color: var(--primary); border-color: rgba(244,63,94,0.15);" title="Delete Record"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i></button>
+                            </td>
+                        `;
+                    }
+
+                    tr.innerHTML = `
+                        <td><strong style="font-family: monospace; font-size: 13px;">${v.vehicle_number}</strong></td>
+                        <td>${v.owner_name}</td>
+                        <td>${v.email}</td>
+                        <td><span style="font-family: monospace; font-size: 12px;">${v.phone}</span></td>
+                        <td><span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${v.vehicle_type}</span></td>
+                        <td>${regDate}</td>
+                        <td><span class="badge-status ${statusClass}">${v.status}</span></td>
+                        ${actionsHtml}
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById("current-page-num").innerText = currentPage;
+                document.getElementById("prev-page-btn").disabled = currentPage === 1;
+                document.getElementById("next-page-btn").disabled = (currentPage * limit) >= data.total;
+
+                content.style.display = "block";
+            } else {
+                empty.style.display = "block";
+            }
+        } catch (err) {
+            console.error(err);
+            empty.style.display = "block";
+        } finally {
+            loading.style.display = "none";
+            lucide.createIcons();
+        }
+    }
+
+    function openAddModal() {
+        editingVehicleId = null;
+        document.getElementById("modal-title").innerText = "Register New Vehicle";
+        document.getElementById("v-plate").disabled = false;
+        
+        document.getElementById("v-plate").value = "";
+        document.getElementById("v-owner").value = "";
+        document.getElementById("v-email").value = "";
+        document.getElementById("v-phone").value = "";
+        document.getElementById("v-address").value = "";
+        document.getElementById("v-type").value = "MOTORCYCLE";
+        document.getElementById("v-status").value = "ACTIVE";
+
+        document.getElementById("vehicle-modal").classList.add("open");
+    }
+
+    function openEditModal(v) {
+        editingVehicleId = v.id;
+        document.getElementById("modal-title").innerText = "Edit Vehicle Registration";
+        document.getElementById("v-plate").disabled = true; // Disable plate number changes on Edit
+        
+        document.getElementById("v-plate").value = v.vehicle_number;
+        document.getElementById("v-owner").value = v.owner_name;
+        document.getElementById("v-email").value = v.email;
+        document.getElementById("v-phone").value = v.phone;
+        document.getElementById("v-address").value = v.address || "";
+        document.getElementById("v-type").value = v.vehicle_type;
+        document.getElementById("v-status").value = v.status;
+
+        document.getElementById("vehicle-modal").classList.add("open");
+    }
+
+    function closeVehicleModal() {
+        document.getElementById("vehicle-modal").classList.remove("open");
+        editingVehicleId = null;
+    }
+
+    async function deleteVehicle(vehicleId) {
+        if (!confirm("Are you sure you want to delete this vehicle registration?")) return;
+
+        try {
+            await apiRequest(`/api/vehicles/${vehicleId}`, {
+                method: "DELETE"
+            });
+            alert("Vehicle record deleted.");
+            loadVehicles();
+        } catch (err) {
+            alert(err.message || "Failed to delete record.");
+        }
+    }
+
+    function openImportModal() {
+        document.getElementById("csv-file").value = "";
+        document.getElementById("import-modal").classList.add("open");
+    }
+
+    function closeImportModal() {
+        document.getElementById("import-modal").classList.remove("open");
+    }
+</script>
+{% endblock %}

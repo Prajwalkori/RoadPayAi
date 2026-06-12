@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - RoadPay AI{% endblock %}
+
+{% block layout %}
+<div class="auth-wrapper bg-dot-pattern">
+    <!-- Ambient Gradients -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div class="auth-container">
+        <!-- Back and Toggle Row -->
+        <div class="auth-header-bar">
+            <a href="/" class="auth-back-link">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+                <span>Back to Home</span>
+            </a>
+            
+            <button onclick="toggleTheme()" class="btn-icon" title="Toggle Theme">
+                <i data-lucide="sun" class="light-icon" style="display: none; width: 14px; height: 14px;"></i>
+                <i data-lucide="moon" class="dark-icon" style="display: none; width: 14px; height: 14px;"></i>
+            </button>
+        </div>
+
+        <!-- Sleek Form Card -->
+        <div class="glass-panel" style="padding: 32px; background: rgba(255,255,255,0.75); border-radius: 28px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 20px; font-weight: 800; color: var(--text-primary);">
+                    Create citizen <span style="background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Account</span>
+                </span>
+                <p style="font-size: 11px; color: var(--text-secondary); mt-6px; font-weight: 600;">Register vehicle owner safety profile</p>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="error-banner" class="alert-box alert-danger" style="display: none; margin-bottom: 20px;">
+                <i data-lucide="shield-alert"></i>
+                <span id="error-message"></span>
+            </div>
+
+            <!-- Registration Form -->
+            <form id="register-form" style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="user"></i>
+                        <input type="text" id="name" placeholder="Rahul Sharma" required class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="mail"></i>
+                        <input type="email" id="email" placeholder="rahul@gmail.com" required class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock"></i>
+                        <input type="password" id="password" placeholder="••••••••" required class="form-input">
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-card btn-card-primary" style="font-size: 11px; font-weight: 700; width: 100%; padding: 14px;">
+                    Create Citizen Account
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">
+                <span>Already have a safety profile? </span>
+                <a href="/login" style="color: var(--primary); text-decoration: none; font-weight: 700;">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.getElementById("register-form");
+    const errorBanner = document.getElementById("error-banner");
+    const errorMessage = document.getElementById("error-message");
+    const submitBtn = document.getElementById("submit-btn");
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorBanner.style.display = "none";
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Creating Account...";
+
+        const name = document.getElementById("name").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        try {
+            // Call register REST API
+            await apiRequest("/api/auth/register", {
+                method: "POST",
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    role: "VEHICLE_OWNER"
+                })
+            });
+
+            // Redirect to login with registration flag
+            window.location.href = "/login?registered=true";
+        } catch (error) {
+            errorMessage.innerText = error.message || "Registration failed. Please check details.";
+            errorBanner.style.display = "flex";
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Create Citizen Account";
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,184 @@
+# ==========================================
+# RoadPay AI - Combined Root GitIgnore File
+# ==========================================
+
+# ------------------------------------------
+# 1. Python & FastAPI Backend Setup
+# ------------------------------------------
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script run within a templates
+#  dir or similar. If they are part of the project they should be ignored.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+.ipython/
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, if you're executing a top-level application, you should commit Pipfile.lock.
+# Pipfile.lock
+
+# poetry
+#   Similar to Pipenv, it is generally recommended to include poetry.lock in version control.
+# poetry.lock
+
+# pdm
+#   Similar to Pipenv, it is generally recommended to include pdm.lock in version control.
+# pdm.lock
+
+# virtualenv / venv
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# SQLite databases (RoadPay local SQLite db)
+*.db
+*.db-journal
+
+# ------------------------------------------
+# 2. Node.js & Next.js Frontend Setup
+# ------------------------------------------
+# Dependencies
+node_modules/
+/frontend/node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+/coverage
+/frontend/coverage
+
+# Next.js build output
+.next/
+/frontend/.next/
+out/
+/frontend/out/
+
+# Production builds
+/build
+/frontend/build
+
+# Vercel deployment metadata
+.vercel
+/frontend/.vercel
+
+# TypeScript build caching
+*.tsbuildinfo
+/frontend/next-env.d.ts
+
+# ------------------------------------------
+# 3. Environment Secrets (CRITICAL)
+# ------------------------------------------
+# Ignore all environment variables containing credentials and secret API keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+backend/.env
+frontend/.env.local
+
+# ------------------------------------------
+# 4. OS and IDE logs
+# ------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.pem
+
+# Debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE Configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

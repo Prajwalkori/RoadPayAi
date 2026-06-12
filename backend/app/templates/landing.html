@@ -1,0 +1,1048 @@
+{% extends "base.html" %}
+
+{% block title %}RoadPay AI - Detect. Educate. Improve. Pay.{% endblock %}
+
+{% block layout %}
+<div class="bg-dot-pattern" style="min-height: 100vh;">
+    
+    <!-- Sticky Header Navigation -->
+    <header class="sticky-header">
+        <div class="container-max header-inner">
+            <a href="/" class="brand">
+                <i data-lucide="brain-circuit"></i>
+                <span style="font-weight: 800;">RoadPay AI</span>
+            </a>
+            
+            <nav class="nav-links" style="display: none; @media (min-width: 768px) { display: flex; }">
+                <a href="#problem">The Loop</a>
+                <a href="#sandbox">Sandbox Tour</a>
+                <a href="#workflow">Workflow</a>
+                <a href="#features">Features</a>
+            </nav>
+            
+            <div class="header-actions">
+                <button onclick="toggleTheme()" class="btn-icon" title="Toggle Theme">
+                    <i data-lucide="sun" class="light-icon" style="display: none; width: 14px; height: 14px;"></i>
+                    <i data-lucide="moon" class="dark-icon" style="display: none; width: 14px; height: 14px;"></i>
+                </button>
+                
+                {% if user %}
+                <a href="/dashboard" class="btn-link">Dashboard</a>
+                <a href="/dashboard" class="btn-pill btn-pill-primary">
+                    <span>Launch App</span>
+                    <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+                </a>
+                {% else %}
+                <a href="/login" class="btn-link">Sign In</a>
+                <a href="/login" class="btn-pill btn-pill-primary">
+                    <span>Launch App</span>
+                    <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="hero-section">
+        <div class="container-max hero-grid">
+            <!-- Left Headline -->
+            <div class="hero-left" style="text-align: left; display: flex; flex-direction: column; gap: 24px;">
+                <div class="badge-tag">
+                    <i data-lucide="sparkle" class="rotate-icon" style="width: 12px; height: 12px; color: var(--primary);"></i>
+                    <span>Safety Enforcement Engine</span>
+                </div>
+                <div>
+                    <h1 class="title-huge">RoadPay AI</h1>
+                    <h2 class="subtitle-muted">Simple, Educative, and Digital Traffic Safety Enforcement</h2>
+                    <p class="description-text">
+                        Detect road violations automatically, explain safety hazards in simple language, reward correct answers with fine reductions, and pay securely online.
+                    </p>
+                </div>
+                <div class="hero-cta">
+                    <a href="/login" class="btn-card btn-card-primary">
+                        <span>Start Detection</span>
+                        <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                    </a>
+                    <a href="#sandbox" class="btn-card btn-card-secondary">
+                        <span>Try Simulator</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Visual Interactive Scanner Widget -->
+            <div class="hero-right">
+                <div class="shutter-widget">
+                    <div class="widget-meta">
+                        <span>PLATE ANALYZER</span>
+                        <span>ACTIVE FEED</span>
+                    </div>
+
+                    <div class="viewfinder" id="hero-viewfinder">
+                        <img src="/static/uploads/default_helmet.png" id="hero-img" alt="Motorcycle scan" onerror="this.src='https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=60'">
+                        <div class="viewfinder-overlay"></div>
+                        <div class="laser-scanner" id="hero-laser" style="display: none;"></div>
+                        <div class="viewfinder-badge" id="hero-violation-badge" style="display: none;">No Helmet (96%)</div>
+                        
+                        <div class="plate-overlay" id="hero-plate-overlay" style="display: none;">
+                          <span class="label">PLATE READ</span>
+                          <span class="value">KA 01 AB 1234</span>
+                        </div>
+
+                        <button onclick="triggerHeroShutter()" class="btn-shutter" id="hero-shutter-btn">
+                            <i data-lucide="camera" style="width: 14px; height: 14px;"></i>
+                            <span>Simulate Shutter</span>
+                        </button>
+                    </div>
+
+                    <div class="widget-ledger" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                        <div class="ledger-row">
+                            <span class="ledger-label">Fine Status:</span>
+                            <span class="ledger-value" id="hero-status-val" style="color: var(--text-tertiary);">Awaiting Scan</span>
+                        </div>
+                        <div class="ledger-row">
+                            <span class="ledger-label">Standard Fine:</span>
+                            <span class="ledger-value">₹500.00</span>
+                        </div>
+                        <div class="ledger-row discount" style="color: var(--success); font-weight: 700;">
+                            <span>Safety Discount:</span>
+                            <span id="hero-discount-val">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM VS SOLUTION (THE LOOP) -->
+    <section id="problem" class="minimal-section">
+        <div class="container-max">
+            <div class="section-header-block">
+                <span class="section-tag">Safety Training</span>
+                <h2 class="section-title">Why Traditional Fines Fail</h2>
+                <p class="section-desc">Traditional traffic fines penalize drivers without explaining the safety hazard, leading to repeat violations. RoadPay AI solves this by combining fines with quick safety quizzes.</p>
+            </div>
+            
+            <div class="split-grid">
+                <!-- Legacy -->
+                <div class="split-col">
+                    <span class="split-tag">Legacy Loop</span>
+                    <h3>Fine Only (Old Way)</h3>
+                    <p>Drivers are fined without any explanation, resulting in frustration and no safety improvement.</p>
+                    <div class="split-list">
+                        <div class="list-item">
+                            <span class="list-item-num">1</span>
+                            <span>Traffic camera records a violation.</span>
+                        </div>
+                        <div class="list-item">
+                            <span class="list-item-num">2</span>
+                            <span>A fine is issued with extra late fees.</span>
+                        </div>
+                        <div class="list-item">
+                            <span class="list-item-num">3</span>
+                            <span>Drivers pay the fine without learning why the rule exists.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RoadPay loop -->
+                <div class="split-col right">
+                    <span class="split-tag primary">RoadPay Loop</span>
+                    <h3>Quiz & Discount (New Way)</h3>
+                    <p>Drivers take a quick safety quiz about their violation, understand the risk, and get a fine reduction for passing.</p>
+                    <div class="split-list">
+                        <div class="list-item success">
+                            <span class="list-item-num">✓</span>
+                            <span>AI scans the image and highlights the specific safety hazard.</span>
+                        </div>
+                        <div class="list-item success">
+                            <span class="list-item-num">✓</span>
+                            <span>Drivers answer a 3-question scenario quiz on road safety.</span>
+                        </div>
+                        <div class="list-item success">
+                            <span class="list-item-num">✓</span>
+                            <span>Passing the quiz cuts 20% off the fine amount instantly.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GUIDED SANDBOX TOUR CONSOLE -->
+    <section id="sandbox" class="minimal-section" style="background: var(--hover-bg); border-bottom: 1px solid var(--border-color);">
+        <div class="container-max">
+            <div class="section-header-block">
+                <span class="section-tag">Interactive Demo</span>
+                <h2 class="section-title">Try the Demo Simulator</h2>
+                <p class="section-desc">Try out the complete process: simulate an AI camera scan, answer the safety quiz, and complete a test payment.</p>
+            </div>
+
+            <!-- Browser Mockup Card -->
+            <div class="browser-frame" style="max-width: 900px; margin: 0 auto;">
+                <div class="browser-header">
+                    <div class="browser-dots">
+                        <span class="browser-dot" style="background: #ff5f56;"></span>
+                        <span class="browser-dot" style="background: #ffbd2e;"></span>
+                        <span class="browser-dot" style="background: #27c93f;"></span>
+                    </div>
+                    <div class="browser-address" id="browser-url-text">roadpay.ai/sandbox/step-1</div>
+                    <div style="width: 20px;"></div>
+                </div>
+
+                <div class="browser-tabs">
+                    <button onclick="goToSandboxStep(1)" class="browser-tab-btn active" id="tab-btn-1">
+                        <span class="tab-num" style="width: 14px; height: 14px; border-radius: 50%; border: 1px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 8px;">1</span>
+                        <span>AI Camera Scan</span>
+                    </button>
+                    <button onclick="goToSandboxStep(2)" class="browser-tab-btn disabled" id="tab-btn-2" disabled>
+                        <span class="tab-num" style="width: 14px; height: 14px; border-radius: 50%; border: 1px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 8px;">2</span>
+                        <span>Safety Classroom</span>
+                    </button>
+                    <button onclick="goToSandboxStep(3)" class="browser-tab-btn disabled" id="tab-btn-3" disabled>
+                        <span class="tab-num" style="width: 14px; height: 14px; border-radius: 50%; border: 1px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 8px;">3</span>
+                        <span>Settle Payment</span>
+                    </button>
+                </div>
+
+                <!-- Browser Workspace -->
+                <div class="browser-content">
+                    
+                    <!-- STEP 1 VIEW -->
+                    <div id="step-1-content" class="sandbox-step-inner">
+                        <div class="sandbox-title-bar">
+                            <div>
+                                <span style="font-size: 9px; font-weight: 800; color: var(--primary); text-transform: uppercase;">Officer View</span>
+                                <h3 class="sandbox-heading">1. Run the AI Shutter Scan</h3>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="selectSandboxViolation('HELMET', this)" class="segment-btn active" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 8px;">Helmet</button>
+                                <button onclick="selectSandboxViolation('TRIPLE', this)" class="segment-btn" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 8px;">Triple Pillion</button>
+                                <button onclick="selectSandboxViolation('WRONG', this)" class="segment-btn" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 8px;">Wrong Way</button>
+                            </div>
+                        </div>
+
+                        <div class="sandbox-split">
+                            <!-- Viewfinder -->
+                            <div class="sandbox-viewport" id="sb-viewport">
+                                <img src="/static/uploads/default_helmet.png" id="sb-img" alt="Simulation evidence" onerror="this.src='https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=60'">
+                                <div class="viewfinder-overlay"></div>
+                                <div class="laser-scanner" id="sb-laser" style="display: none;"></div>
+                                
+                                <div id="sb-scan-overlay" style="display: none; z-index: 20;">
+                                    <div class="sandbox-viewport-tag" id="sb-tag-pass">
+                                        <span class="dot"></span>
+                                        <span id="sb-tag-text">AI inference OK</span>
+                                    </div>
+                                    <div style="position: absolute; top: 1/3; left: 1/4; border: 2px solid var(--primary); background: rgba(244,63,94,0.15); color: white; font-family: monospace; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px;" id="sb-bbox">HELMET_VIOLATION</div>
+                                </div>
+
+                                <button onclick="runSandboxScan()" class="btn-shutter" id="sb-shutter-btn">
+                                    <i data-lucide="camera" style="width: 14px; height: 14px;"></i>
+                                    <span>Simulate Shutter Scan</span>
+                                </button>
+                            </div>
+
+                            <!-- Log panel -->
+                            <div class="sandbox-sidebar">
+                                <div class="sandbox-diagnostic-list" id="sb-diagnostic-block" style="opacity: 0.5;">
+                                    <div class="sandbox-diag-item">
+                                        <span style="color: var(--text-secondary);">LIC PLATE OCR:</span>
+                                        <span id="sb-log-plate">Awaiting scan...</span>
+                                    </div>
+                                    <div style="text-align: left;">
+                                        <span style="font-size: 9px; font-weight: 800; color: var(--primary); text-transform: uppercase;">AI Violation Explanation</span>
+                                        <p class="sandbox-explanation" id="sb-log-explanation">Click "Simulate Shutter Scan" on the left to analyze the photo and read the vehicle number plate.</p>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="proceedToSandboxStep2()" class="btn-card btn-card-primary" id="sb-step1-btn" disabled style="width: 100%; opacity: 0.5; cursor: not-allowed;">
+                                    <span>Proceed to Safety Quiz</span>
+                                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2 VIEW (QUIZ) -->
+                    <div id="step-2-content" class="sandbox-step-inner" style="display: none;">
+                        <div class="sandbox-title-bar">
+                            <div>
+                                <span style="font-size: 9px; font-weight: 800; color: var(--primary); text-transform: uppercase;">Citizen Education</span>
+                                <h3 class="sandbox-heading">2. Take the Safety Quiz</h3>
+                            </div>
+                            <div class="sandbox-badge success" id="sb-quiz-badge">Plate: KA-01-AB-1234</div>
+                        </div>
+
+                        <!-- Quiz Dashboard start screen -->
+                        <div id="quiz-intro" class="quiz-intro-box">
+                            <div class="quiz-icon-container"><i data-lucide="award" style="width: 24px; height: 24px;"></i></div>
+                            <div style="text-align: center;">
+                                <h4 style="font-size: 15px; font-weight: 800; color: var(--text-primary);">Learn and Settle the Fine</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); max-width: 400px; margin: 8px auto 0; line-height: 1.5;">
+                                    Answer 3 simple questions about this traffic violation. Score 2/3 correct to receive a 20% discount (reducing ₹500.00 to ₹400.00).
+                                </p>
+                            </div>
+                            <button onclick="startSandboxQuiz()" class="btn-card btn-card-primary" style="margin: 0 auto; padding: 12px 28px;">
+                                Start Safety Quiz
+                            </button>
+                        </div>
+
+                        <!-- Quiz Active Screen -->
+                        <div id="quiz-active" style="display: none; grid-template-cols: 1fr; gap: 32px; flex-grow: 1;" class="sandbox-split">
+                            <!-- Questions -->
+                            <div class="quiz-q-block" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 280px;">
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 9px; font-family: monospace; font-weight: 800; color: var(--text-tertiary);">
+                                        <span id="quiz-q-num">QUESTION 1 OF 3</span>
+                                        <span id="quiz-score-num">SCORE: 0/3</span>
+                                    </div>
+                                    <h4 id="quiz-question-text" style="font-size: 14px; font-weight: 800; text-align: left; line-height: 1.4;">Is it safe to ride a bike without a helmet?</h4>
+                                    
+                                    <div id="quiz-options-block" style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+                                        <!-- Will fill dynamically -->
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                                    <button onclick="submitQuizAnswer()" class="btn-card btn-card-primary" id="quiz-submit-btn" disabled style="width: 100%;">Submit Answer</button>
+                                    <button onclick="nextQuizQuestion()" class="btn-card btn-card-primary" id="quiz-next-btn" style="display: none; width: 100%;">Next Question</button>
+                                </div>
+                            </div>
+
+                            <!-- Explanation panel -->
+                            <div class="sandbox-sidebar">
+                                <div style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
+                                    <span style="font-size: 9px; font-weight: 800; color: var(--primary); text-transform: uppercase;">Mitigation Ledger</span>
+                                    <div style="font-family: monospace; font-size: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
+                                            <span>Base Fine:</span>
+                                            <span>₹500.00</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; color: var(--success);">
+                                            <span>Quiz Credit:</span>
+                                            <span id="quiz-ledger-discount">- ₹0.00</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 12px; color: var(--text-primary);">
+                                            <span>Outstanding:</span>
+                                            <span id="quiz-ledger-final">₹500.00</span>
+                                        </div>
+                                    </div>
+                                    <div id="quiz-feedback-box" class="alert-box alert-success" style="display: none; font-size: 10px; padding: 10px; border-radius: 12px;">
+                                        <span id="quiz-feedback-text">Feedback text here</span>
+                                    </div>
+                                </div>
+
+                                <div style="font-size: 9px; color: var(--text-secondary); line-height: 1.4; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                                    Verify safety choices dynamically on the ledger. Scoring correct reduces final outstanding.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quiz Passed screen -->
+                        <div id="quiz-complete-screen" class="quiz-intro-box" style="display: none;">
+                            <div class="success-badge-circle"><i data-lucide="shield-check" style="width: 24px; height: 24px;"></i></div>
+                            <div style="text-align: center;">
+                                <h4 style="font-size: 16px; font-weight: 800; color: var(--text-primary);">Mitigation Exam Passed!</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); max-width: 380px; margin: 8px auto 0; line-height: 1.4;" id="quiz-complete-desc">
+                                    Great job! You scored 3/3 and applied an instant 20% discount. Your final settle amount is updated to ₹400.00.
+                                </p>
+                            </div>
+                            <div class="badge-tag" style="align-self: center; border-color: rgba(16,185,129,0.15); background: rgba(16,185,129,0.05); color: var(--success); font-family: monospace;">
+                                CERT CODE: RPCERT-SX2LJO
+                            </div>
+                            <button onclick="goToSandboxStep(3)" class="btn-card btn-card-primary" style="margin: 0 auto; padding: 12px 28px;">
+                                Proceed to Settle
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 VIEW (PAYMENTS) -->
+                    <div id="step-3-content" class="sandbox-step-inner" style="display: none;">
+                        <div class="sandbox-title-bar">
+                            <div>
+                                <span style="font-size: 9px; font-weight: 800; color: var(--primary); text-transform: uppercase;">Payment Gateway</span>
+                                <h3 class="sandbox-heading">3. Settle Fine Online</h3>
+                            </div>
+                            <div class="sandbox-badge success">Quiz Passed: 20% Discount Applied</div>
+                        </div>
+
+                        <div class="receipt-wrapper" id="receipt-box">
+                            <div style="display: flex; flex-direction: column; gap: 4px; text-align: left; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                                <span style="font-size: 9px; font-weight: 800; color: var(--text-tertiary); font-family: monospace;">CITIZEN RECEIPT</span>
+                                <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 13px; color: var(--text-primary);">
+                                    <span>Total Amount Payable</span>
+                                    <span id="receipt-amount">₹400.00</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px; text-align: left; font-family: monospace; font-size: 10px; color: var(--text-secondary);">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Invoice ID:</span>
+                                    <span style="font-weight: 700; color: var(--text-primary);" id="receipt-invoice-id">RP-20260611-H1</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Surcharge:</span>
+                                    <span>₹0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; color: var(--text-primary);">
+                                    <span>Total Due:</span>
+                                    <span id="receipt-total">₹400.00</span>
+                                </div>
+                            </div>
+
+                            <button onclick="triggerRazorpayCheckout()" class="btn-card btn-card-primary" id="btn-trigger-pay" style="padding: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i data-lucide="check" style="width: 14px; height: 14px;"></i>
+                                <span>Pay Outstanding Fine</span>
+                            </button>
+                        </div>
+
+                        <!-- Simulated Razorpay Popup modal overlay -->
+                        <div class="checkout-mockup" id="razorpay-popup" style="display: none; border-radius: 16px; margin: 20px auto;">
+                            <div class="checkout-header">
+                                <div>
+                                    <span style="font-size: 8px; color: #cbd5e1; display: block; font-weight: 800;">SIMULATED SECURE GATEWAY</span>
+                                    <h5 style="margin-top: 2px;">RoadPay AI Payments</h5>
+                                </div>
+                                <span class="amount" id="popup-amount">₹400.00</span>
+                            </div>
+                            <div class="checkout-body">
+                                <span class="checkout-title">Choose Simulated Method</span>
+                                <button onclick="completeSandboxPayment()" class="checkout-btn">
+                                    <span>📱 Simulated UPI (GPay/PhonePe)</span>
+                                    <span style="color: var(--success);">Free</span>
+                                </button>
+                                <button onclick="completeSandboxPayment()" class="checkout-btn">
+                                    <span>💳 Simulated Debit / Credit Card</span>
+                                    <span style="color: var(--success);">Free</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Settle Success Overlay -->
+                        <div id="settle-success" class="quiz-intro-box" style="display: none;">
+                            <div class="success-badge-circle" style="background: var(--success);"><i data-lucide="check" style="width: 24px; height: 24px;"></i></div>
+                            <div style="text-align: center;">
+                                <h4 style="font-size: 16px; font-weight: 800; color: var(--text-primary);">Payment Completed!</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); max-width: 380px; margin: 8px auto 0; line-height: 1.4;">
+                                    The ticket is now marked as **PAID** in the vehicle registry. A confirmation email and PDF safety certificate have been generated.
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 12px; max-width: 300px; margin: 0 auto; width: 100%;">
+                                <button onclick="resetSandbox()" class="btn-card btn-card-secondary" style="flex: 1; padding: 10px; font-size: 11px;">
+                                    Restart Sandbox
+                                </button>
+                                <a href="/login" class="btn-card btn-card-primary" style="flex: 1; padding: 10px; font-size: 11px; text-decoration: none;">
+                                    Start Live App
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CORE WORKFLOW TIMELINE -->
+    <section id="workflow" class="minimal-section">
+        <div class="container-max">
+            <div class="section-header-block">
+                <span class="section-tag">Process Flow</span>
+                <h2 class="section-title">How the System Works</h2>
+                <p class="section-desc">From camera photo capture to online payment, here is the lifecycle flow of a traffic ticket in RoadPay AI.</p>
+            </div>
+            
+            <div class="timeline-grid">
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="camera"></i></span>
+                        <span class="timeline-num">01</span>
+                    </div>
+                    <h4>Evidence Capture</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Traffic cameras or officers upload photos or videos of road safety violations.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="brain-circuit"></i></span>
+                        <span class="timeline-num">02</span>
+                    </div>
+                    <h4>AI Violation Detection</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">AI vision models analyze the captured photo to identify the specific safety violation.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="eye"></i></span>
+                        <span class="timeline-num">03</span>
+                    </div>
+                    <h4>License Plate OCR</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">The system automatically reads the license plate number from the photo.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="user-check"></i></span>
+                        <span class="timeline-num">04</span>
+                    </div>
+                    <h4>Owner Lookup</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">The system matches the license plate with the vehicle registry to retrieve owner details.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="file-text"></i></span>
+                        <span class="timeline-num">05</span>
+                    </div>
+                    <h4>Ticket Generation</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">A formal PDF ticket is compiled with proof photos, safety guidelines, and payment links.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="mail"></i></span>
+                        <span class="timeline-num">06</span>
+                    </div>
+                    <h4>Automatic Alerts</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">The driver receives an email notification with a secure link to the safety module.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="award"></i></span>
+                        <span class="timeline-num">07</span>
+                    </div>
+                    <h4>Safety Quiz</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">The owner learns about safety rules and takes a quick quiz about their specific violation.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="sparkles"></i></span>
+                        <span class="timeline-num">08</span>
+                    </div>
+                    <h4>Fine Discount</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Scoring at least 2/3 correct on the quiz applies an instant 20% discount on the fine.</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="timeline-card-header">
+                        <span class="timeline-icon-box"><i data-lucide="smartphone"></i></span>
+                        <span class="timeline-num">09</span>
+                    </div>
+                    <h4>Secure Settle</h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">The owner pays the discounted fine online, updating the database status to PAID instantly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BENTO FEATURES GRID -->
+    <section id="features" class="minimal-section" style="border-bottom: 1px solid var(--border-color);">
+        <div class="container-max">
+            <div class="section-header-block">
+                <span class="section-tag">Key Features</span>
+                <h2 class="section-title">Core Safety Modules</h2>
+                <p class="section-desc">Automated, secure, and educational features designed to improve traffic safety.</p>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- Card 1 -->
+                <div class="bento-card">
+                    <div class="bento-card-top">
+                        <i data-lucide="brain-circuit" class="bento-icon"></i>
+                        <h3>AI Violation Scanning</h3>
+                        <p>Automatically flags safety violations like riding without a helmet, triple riding on a motorcycle, or driving in the wrong lane.</p>
+                    </div>
+                    <div class="bento-sub-box">
+                        - Helmet Check: FAILED ➔ ALERT<br>
+                        - Passenger Count: 3 ➔ OVERLOAD
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bento-card">
+                    <div class="bento-card-top">
+                        <i data-lucide="eye" class="bento-icon"></i>
+                        <h3>Number Plate Reading</h3>
+                        <p>Uses OCR technology to accurately extract license plates and locate the registered owner details instantly.</p>
+                    </div>
+                    <div class="bento-sub-box" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Plate: "KA-01-AB-1234"</span>
+                        <span style="background: var(--success); color: white; padding: 2px 6px; font-weight: 800; border-radius: 4px; font-size: 8px;">READ OK</span>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bento-card">
+                    <div class="bento-card-top">
+                        <i data-lucide="sparkles" class="bento-icon"></i>
+                        <h3>Safety Awareness</h3>
+                        <p>Explains to drivers exactly why the rule is important, citing stopping distances, balance risks, and helmet crash ratings.</p>
+                    </div>
+                    <div class="bento-sub-box" style="font-style: italic; font-size: 8.5px;">
+                        "Wearing a helmet absorbs impact velocity, reducing severe head trauma by 70%."
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TECHNOLOGY PILLS -->
+    <section class="minimal-section">
+        <div class="container-max" style="text-align: left;">
+            <div class="section-header-block">
+                <span class="section-tag">Technologies</span>
+                <h2 class="section-title">Built with Modern Tools</h2>
+            </div>
+            
+            <div class="tech-pills">
+                <span class="tech-pill">FastAPI</span>
+                <span class="tech-pill">SQLAlchemy</span>
+                <span class="tech-pill">SQLite / PostgreSQL</span>
+                <span class="tech-pill">Jinja2 Templates</span>
+                <span class="tech-pill">Gemini 3.5 Flash</span>
+                <span class="tech-pill">ReportLab PDF</span>
+                <span class="tech-pill">Razorpay Gateways</span>
+                <span class="tech-pill">SMTP Mailers</span>
+                <span class="tech-pill">Vanilla HTML5 & CSS3</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer style="border-top: 1px solid var(--border-color); padding: 48px 0; background: var(--hover-bg); font-size: 12px; color: var(--text-secondary);">
+        <div class="container-max" style="display: flex; flex-direction: column; md-flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div class="flex-align" style="display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--text-primary);">
+                <i data-lucide="brain-circuit" style="color: var(--primary); width: 18px; height: 18px;"></i>
+                <span>RoadPay AI</span>
+            </div>
+            <span>&copy; 2026 RoadPay AI. All rights reserved. Safer driving through education.</span>
+        </div>
+    </footer>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Hero Widget Interaction State
+    let heroScanning = false;
+    let heroComplete = false;
+    
+    function triggerHeroShutter() {
+        if (heroScanning) return;
+        heroScanning = true;
+        
+        const img = document.getElementById("hero-img");
+        const laser = document.getElementById("hero-laser");
+        const btn = document.getElementById("hero-shutter-btn");
+        const badge = document.getElementById("hero-violation-badge");
+        const plate = document.getElementById("hero-plate-overlay");
+        const statusVal = document.getElementById("hero-status-val");
+        const discountVal = document.getElementById("hero-discount-val");
+        
+        // Setup scan UI
+        laser.style.display = "block";
+        btn.disabled = true;
+        btn.innerHTML = `<span>Scanning...</span>`;
+        statusVal.innerText = "Processing...";
+        statusVal.style.color = "var(--warning)";
+        
+        setTimeout(() => {
+            heroScanning = false;
+            heroComplete = true;
+            laser.style.display = "none";
+            
+            // Success details
+            btn.style.display = "none";
+            badge.style.display = "block";
+            plate.style.display = "block";
+            
+            statusVal.innerText = "UNRESOLVED";
+            statusVal.style.color = "var(--primary)";
+            discountVal.innerText = "₹100.00";
+        }, 2000);
+    }
+
+    // 2. Sandbox Simulation State Machine
+    let sandboxStep = 1;
+    let activeViolation = "HELMET";
+    let sbScanning = false;
+    let sbScanComplete = false;
+    let sbQuizStarted = false;
+    let sbQuizComplete = false;
+    let sbQuizScore = 0;
+    let currentQIdx = 0;
+    let quizSelectedAns = null;
+    let quizSubmittedAns = false;
+    
+    let payStarted = false;
+    let payComplete = false;
+
+    const sandboxData = {
+        HELMET: {
+            image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&auto=format&fit=crop&q=60",
+            plate: "KA 01 AB 1234",
+            owner: "Rohan Sharma",
+            violationCode: "HELMET_VIOLATION",
+            bbox: "NO_HELMET (96%)",
+            explanation: "Not wearing a helmet increases the risk of severe head injury and death in accidents. Certified helmets absorb shock and protect your skull, reducing brain injury risks by 70%.",
+            invoiceId: "RP-20260611-H1",
+            quiz: [
+                {
+                    q: "Is it safe to ride without a helmet on a quick 2-minute trip?",
+                    opts: ["Yes, if you drive slowly on the shoulder", "No, statistics show 40%+ of fatal head accidents occur within 5km of home", "Yes, since speed will be low", "Only if you have a pillion rider holding it"],
+                    correct: 1,
+                    feedback: "Short trips are not safer. Accidents can occur at any distance. Wearing a helmet is essential on every ride."
+                },
+                {
+                    q: "What safety certification mark should you look for on helmets in India?",
+                    opts: ["Local shop stamp", "ISI mark (IS 4151)", "Aerodynamic tag", "Price above 3000 rupees"],
+                    correct: 1,
+                    feedback: "The ISI certification verifies that the helmet has undergone shock simulation and chin strap strength tests."
+                },
+                {
+                    q: "By what percentage does a certified helmet reduce the risk of brain injuries?",
+                    opts: ["Around 10%", "Nearly 70% reduction in fatal brain shears", "No direct impact on brain trauma", "Over 99%"],
+                    correct: 1,
+                    feedback: "Helmets absorb the shock velocity impact, cushioning the skull and reducing brain trauma by 70%."
+                }
+            ]
+        },
+        TRIPLE: {
+            image: "https://images.unsplash.com/photo-1611244420078-48f07a89ff7b?w=600&auto=format&fit=crop&q=60",
+            plate: "KA 03 MM 4567",
+            owner: "Priya Nair",
+            violationCode: "TRIPLE_RIDING",
+            bbox: "OVERLOAD_TRIPLE (94%)",
+            explanation: "Carrying three people destabilizes motorcycle balance and compromises steering control. This extends braking distances and raises the probability of sliding or flipping during sudden stops.",
+            invoiceId: "RP-20260611-T1",
+            quiz: [
+                {
+                    q: "How does triple riding affect the stability of a motorcycle?",
+                    opts: ["It improves traction by adding weight", "It increases stopping distance and compromises steering controls", "It lowers the center of gravity", "It has no impact if the rider is experienced"],
+                    correct: 1,
+                    feedback: "Dynamic balance is designed for max 2 riders. Excess load compromises shock absorption and response."
+                },
+                {
+                    q: "Under hard braking, what is the most likely reaction of an overloaded motorcycle?",
+                    opts: ["It stops faster due to weight friction", "It is highly likely to skid, fishtail, or crash", "It automatically engages cruise control", "It slides safely in a straight line"],
+                    correct: 1,
+                    feedback: "Forward momentum is doubled, causing tires to lose grip, rear wheel to lift, or slide out."
+                },
+                {
+                    q: "What is the correct way to transport 3 passengers if you only own a motorcycle?",
+                    opts: ["Place the shortest person in the middle", "Ride slowly on quiet side streets", "Make multiple trips or hire a taxi/auto-rickshaw", "Have one person stand on the footrest"],
+                    correct: 2,
+                    feedback: "Never compromise safety. Taking public transit or multiple trips is the only safe and legal path."
+                }
+            ]
+        },
+        WRONG: {
+            image: "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=600&auto=format&fit=crop&q=60",
+            plate: "DL 3C AA 9988",
+            owner: "Aarav Singh",
+            violationCode: "WRONG_DIRECTION",
+            bbox: "WRONG_WAY (98%)",
+            explanation: "Driving in the wrong direction creates unexpected head-on collision risks for oncoming traffic. It reduces reaction times to zero, so it is always safest to proceed to a designated U-turn.",
+            invoiceId: "RP-20260611-W1",
+            quiz: [
+                {
+                    q: "Why is a head-on collision from wrong-way driving so fatal?",
+                    opts: ["Both vehicles' velocities sum on impact, making forces exponentially lethal", "Airbags do not activate", "Oncoming drivers have right of way in all lanes", "It is only dangerous in rainy conditions"],
+                    correct: 0,
+                    feedback: "If two cars travel at 50km/h, a head-on crash has the force of hitting a solid brick wall at 100km/h."
+                },
+                {
+                    q: "If your exit is U-turn is 1km away but the shop is directly across, what should you do?",
+                    opts: ["Drive along the wrong side edge slowly", "Cross the median divider divider gap", "Proceed to the correct U-turn ahead", "Ride on the pedestrian sidewalk"],
+                    correct: 2,
+                    feedback: "Saving 2 minutes is not worth a fatal crash. Always proceed to the official U-turn."
+                },
+                {
+                    q: "Is driving wrong-way on the shoulder of a highway safe?",
+                    opts: ["Yes, since you are out of main lanes", "No, shoulders are for breakdowns and pedestrians, and merging cars don't look for wrong-way traffic", "Yes, if you keep hazard lights active", "Only during daylight hours"],
+                    correct: 1,
+                    feedback: "Shoulders are emergency lanes. Oncoming drivers or merging cars will not look for opposite flow vehicles there."
+                }
+            ]
+        }
+    };
+
+    function selectSandboxViolation(vType, btn) {
+        if (sbScanning) return;
+        activeViolation = vType;
+        
+        // Remove active class from buttons
+        btn.parentNode.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        
+        // Update viewfinder image
+        document.getElementById("sb-img").src = sandboxData[activeViolation].image;
+        
+        // Reset step state
+        sbScanComplete = false;
+        document.getElementById("sb-scan-overlay").style.display = "none";
+        document.getElementById("sb-shutter-btn").style.display = "flex";
+        
+        // Mute diagnostics
+        document.getElementById("sb-diagnostic-block").style.opacity = "0.5";
+        document.getElementById("sb-log-plate").innerText = "Awaiting scan...";
+        document.getElementById("sb-log-explanation").innerText = "Plate diagnostic details will appear here once the vision camera shutter triggers.";
+        
+        document.getElementById("sb-step1-btn").disabled = true;
+        document.getElementById("sb-step1-btn").style.opacity = "0.5";
+        document.getElementById("sb-step1-btn").style.cursor = "not-allowed";
+    }
+
+    function runSandboxScan() {
+        if (sbScanning) return;
+        sbScanning = true;
+        
+        const laser = document.getElementById("sb-laser");
+        const shutter = document.getElementById("sb-shutter-btn");
+        const viewport = document.getElementById("sb-viewport");
+        
+        laser.style.display = "block";
+        viewport.classList.add("scanning");
+        shutter.disabled = true;
+        shutter.innerHTML = `<span>Analyzing feed...</span>`;
+        
+        setTimeout(() => {
+            sbScanning = false;
+            sbScanComplete = true;
+            
+            laser.style.display = "none";
+            viewport.classList.remove("scanning");
+            shutter.style.display = "none";
+            shutter.disabled = false;
+            shutter.innerHTML = `<i data-lucide="camera" style="width: 14px; height: 14px;"></i><span>Simulate Shutter Scan</span>`;
+            
+            // Set overlay boxes
+            document.getElementById("sb-bbox").innerText = sandboxData[activeViolation].bbox;
+            document.getElementById("sb-scan-overlay").style.display = "block";
+            
+            // Populate diagnostics
+            document.getElementById("sb-diagnostic-block").style.opacity = "1";
+            document.getElementById("sb-log-plate").innerText = sandboxData[activeViolation].plate;
+            document.getElementById("sb-log-explanation").innerText = sandboxData[activeViolation].explanation;
+            
+            // Enable next step button
+            const nextBtn = document.getElementById("sb-step1-btn");
+            nextBtn.disabled = false;
+            nextBtn.style.opacity = "1";
+            nextBtn.style.cursor = "pointer";
+            
+            // Enable next tab
+            document.getElementById("tab-btn-2").disabled = false;
+            document.getElementById("tab-btn-2").classList.remove("disabled");
+            
+            // Re-draw lucide icons
+            lucide.createIcons();
+        }, 2000);
+    }
+
+    function proceedToSandboxStep2() {
+        goToSandboxStep(2);
+    }
+
+    function goToSandboxStep(step) {
+        sandboxStep = step;
+        document.getElementById("browser-url-text").innerText = `roadpay.ai/sandbox/step-${step}`;
+        
+        // Manage active tab headers
+        document.querySelectorAll(".browser-tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById(`tab-btn-${step}`).classList.add("active");
+        
+        // Toggle view containers
+        document.getElementById("step-1-content").style.display = (step === 1) ? "flex" : "none";
+        document.getElementById("step-2-content").style.display = (step === 2) ? "flex" : "none";
+        document.getElementById("step-3-content").style.display = (step === 3) ? "flex" : "none";
+        
+        if (step === 2) {
+            // Set quiz header plate
+            document.getElementById("sb-quiz-badge").innerText = `Plate: ${sandboxData[activeViolation].plate}`;
+        }
+        
+        if (step === 3) {
+            // Set billing details
+            const isDiscounted = sbQuizComplete && sbQuizScore >= 2;
+            const finalAmt = isDiscounted ? "₹400.00" : "₹500.00";
+            
+            document.getElementById("receipt-amount").innerText = finalAmt;
+            document.getElementById("receipt-total").innerText = finalAmt;
+            document.getElementById("popup-amount").innerText = finalAmt;
+            document.getElementById("receipt-invoice-id").innerText = sandboxData[activeViolation].invoiceId;
+        }
+    }
+
+    // Quiz functions
+    function startSandboxQuiz() {
+        sbQuizStarted = true;
+        currentQIdx = 0;
+        sbQuizScore = 0;
+        quizSelectedAns = null;
+        quizSubmittedAns = false;
+        
+        document.getElementById("quiz-intro").style.display = "none";
+        document.getElementById("quiz-active").style.display = "grid";
+        
+        loadQuizQuestion();
+    }
+
+    function loadQuizQuestion() {
+        const qData = sandboxData[activeViolation].quiz[currentQIdx];
+        
+        document.getElementById("quiz-q-num").innerText = `QUESTION ${currentQIdx + 1} OF 3`;
+        document.getElementById("quiz-score-num").innerText = `SCORE: ${sbQuizScore}/3`;
+        document.getElementById("quiz-question-text").innerText = qData.q;
+        
+        const optsContainer = document.getElementById("quiz-options-block");
+        optsContainer.innerHTML = "";
+        
+        qData.opts.forEach((opt, idx) => {
+            const btn = document.createElement("button");
+            btn.className = "quiz-option-btn";
+            btn.innerHTML = `<span>${opt}</span>`;
+            btn.onclick = () => selectQuizOption(idx, btn);
+            optsContainer.appendChild(btn);
+        });
+        
+        // Hide next button, show submit button
+        document.getElementById("quiz-submit-btn").style.display = "block";
+        document.getElementById("quiz-submit-btn").disabled = true;
+        document.getElementById("quiz-next-btn").style.display = "none";
+        document.getElementById("quiz-feedback-box").style.display = "none";
+    }
+
+    function selectQuizOption(idx, btn) {
+        if (quizSubmittedAns) return;
+        quizSelectedAns = idx;
+        
+        document.querySelectorAll(".quiz-option-btn").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        
+        document.getElementById("quiz-submit-btn").disabled = false;
+    }
+
+    function submitQuizAnswer() {
+        if (quizSelectedAns === null || quizSubmittedAns) return;
+        quizSubmittedAns = true;
+        
+        const qData = sandboxData[activeViolation].quiz[currentQIdx];
+        const correct = qData.correct;
+        const options = document.querySelectorAll(".quiz-option-btn");
+        
+        options.forEach((btn, idx) => {
+            btn.onclick = null; // Disable clicking
+            
+            if (idx === correct) {
+                btn.className = "quiz-option-btn correct";
+                btn.innerHTML += `<span class="option-status-circle correct">✓</span>`;
+            } else if (idx === quizSelectedAns) {
+                btn.className = "quiz-option-btn incorrect";
+                btn.innerHTML += `<span class="option-status-circle incorrect">✗</span>`;
+            } else {
+                btn.className = "quiz-option-btn muted";
+            }
+        });
+        
+        // Calculate score
+        let isCorrect = quizSelectedAns === correct;
+        if (isCorrect) {
+            sbQuizScore++;
+            document.getElementById("quiz-score-num").innerText = `SCORE: ${sbQuizScore}/3`;
+        }
+        
+        // Recalculate side ledger outstanding dynamically
+        const currentDiscount = (sbQuizScore >= 2 || (currentQIdx === 2 && sbQuizScore >= 1 && isCorrect)) ? "₹100.00" : "₹0.00";
+        const currentFinal = (sbQuizScore >= 2 || (currentQIdx === 2 && sbQuizScore >= 1 && isCorrect)) ? "₹400.00" : "₹500.00";
+        
+        document.getElementById("quiz-ledger-discount").innerText = `- ${currentDiscount}`;
+        document.getElementById("quiz-ledger-final").innerText = currentFinal;
+        
+        // Show explanation
+        document.getElementById("quiz-feedback-text").innerText = qData.feedback;
+        document.getElementById("quiz-feedback-box").style.display = "flex";
+        
+        document.getElementById("quiz-submit-btn").style.display = "none";
+        document.getElementById("quiz-next-btn").style.display = "block";
+        document.getElementById("quiz-next-btn").innerText = currentQIdx < 2 ? "Next Question" : "Complete Assessment";
+    }
+
+    function nextQuizQuestion() {
+        quizSelectedAns = null;
+        quizSubmittedAns = false;
+        
+        if (currentQIdx < 2) {
+            currentQIdx++;
+            loadQuizQuestion();
+        } else {
+            completeSandboxQuiz();
+        }
+    }
+
+    function completeSandboxQuiz() {
+        sbQuizComplete = true;
+        
+        document.getElementById("quiz-active").style.display = "none";
+        document.getElementById("quiz-complete-screen").style.display = "flex";
+        
+        const isPassed = sbQuizScore >= 2;
+        const text = isPassed 
+            ? `Excellent work! You scored ${sbQuizScore}/3 and successfully applied an instant 20% discount (₹500.00 reduced to ₹400.00) alongside your Safety Certificate.`
+            : `You completed the safety module with a score of ${sbQuizScore}/3. We have granted you the corrective 20% discount for this sandbox demo anyway!`;
+            
+        document.getElementById("quiz-complete-desc").innerText = text;
+        
+        // Enable step 3 tab
+        document.getElementById("tab-btn-3").disabled = false;
+        document.getElementById("tab-btn-3").classList.remove("disabled");
+        
+        // Draw lucide icons
+        lucide.createIcons();
+    }
+
+    // Settle / Payment Checkout Simulation
+    function triggerRazorpayCheckout() {
+        payStarted = true;
+        
+        document.getElementById("receipt-box").style.display = "none";
+        document.getElementById("razorpay-popup").style.display = "block";
+    }
+
+    function completeSandboxPayment() {
+        payComplete = true;
+        
+        document.getElementById("razorpay-popup").style.display = "none";
+        document.getElementById("settle-success").style.display = "flex";
+        
+        // Draw lucide icons
+        lucide.createIcons();
+    }
+
+    function resetSandbox() {
+        goToSandboxStep(1);
+        sbScanComplete = false;
+        sbScanning = false;
+        sbQuizStarted = false;
+        sbQuizComplete = false;
+        sbQuizScore = 0;
+        currentQIdx = 0;
+        quizSelectedAns = null;
+        quizSubmittedAns = false;
+        payStarted = false;
+        payComplete = false;
+        
+        // Reset displays
+        document.getElementById("quiz-intro").style.display = "flex";
+        document.getElementById("quiz-complete-screen").style.display = "none";
+        document.getElementById("receipt-box").style.display = "flex";
+        document.getElementById("settle-success").style.display = "none";
+        document.getElementById("razorpay-popup").style.display = "none";
+        
+        // Reset buttons classes
+        document.getElementById("tab-btn-2").disabled = true;
+        document.getElementById("tab-btn-2").classList.add("disabled");
+        document.getElementById("tab-btn-3").disabled = true;
+        document.getElementById("tab-btn-3").classList.add("disabled");
+        
+        // Select helmet to reset layout
+        selectSandboxViolation("HELMET", document.querySelector(".browser-tabs").parentNode.querySelector(".segment-btn"));
+    }
+</script>
+{% endblock %}

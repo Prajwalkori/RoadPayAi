@@ -1,0 +1,355 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Dashboard Overview - RoadPay AI{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y" style="display: flex; flex-direction: column; gap: 32px; text-align: left;">
+    
+    <!-- Header Block -->
+    <div>
+        <span class="section-tag">Overview</span>
+        <h2 class="section-title">Welcome back, <span id="user-display-name">{{ user.name }}</span></h2>
+        <p class="section-desc" id="overview-welcome-sub">Access your road safety console status indicators.</p>
+    </div>
+
+    <!-- Loading Skeleton -->
+    <div id="dashboard-loading" class="flex-align" style="display: flex; align-items: center; justify-content: center; min-height: 200px; gap: 8px;">
+        <i data-lucide="loader" class="animate-spin text-rose-500"></i>
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Loading console analytics...</span>
+    </div>
+
+    <!-- CITIZEN OWNER WORKSPACE -->
+    {% if user.role == "VEHICLE_OWNER" %}
+    <div id="owner-workspace" style="display: none;" class="space-y">
+        <!-- Metrics Cards Grid -->
+        <div class="metrics-row">
+            <div class="metric-card">
+                <h4>Outstanding Fines</h4>
+                <div class="value" id="owner-stat-unpaid">₹0.00</div>
+                <div class="change down" id="owner-stat-count-unpaid"><i data-lucide="alert-triangle"></i> 0 Pending</div>
+            </div>
+            <div class="metric-card">
+                <h4>Selled Invoices</h4>
+                <div class="value" id="owner-stat-paid">₹0.00</div>
+                <div class="change up"><i data-lucide="check-circle"></i> Settle Success</div>
+            </div>
+            <div class="metric-card">
+                <h4>Safety XP Level</h4>
+                <div class="value" id="owner-stat-xp">0 XP</div>
+                <div class="change up" style="color: var(--info);"><i data-lucide="award"></i> Level 1 Driver</div>
+            </div>
+            <div class="metric-card">
+                <h4>Earned Badges</h4>
+                <div class="value" id="owner-stat-badges">0</div>
+                <div class="change up" style="color: var(--success);"><i data-lucide="shield-check"></i> Safe Driver</div>
+            </div>
+        </div>
+
+        <!-- Banner Alert if pending fines exist -->
+        <div id="unpaid-banner" class="alert-box alert-danger" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 32px; border-radius: 20px; padding: 20px;">
+            <div style="display: flex; gap: 12px; align-items: start;">
+                <i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i>
+                <div>
+                    <span style="font-weight: 800; font-size: 13px; block">Active Pending Traffic Challan Detected</span>
+                    <span style="font-size: 11px; opacity: 0.8; block; mt-4px;">Complete the corrective classroom quiz course to save up to 20% on the fine invoice instantly!</span>
+                </div>
+            </div>
+            <a href="/dashboard/learning" class="btn-card btn-card-primary" style="padding: 10px 20px; font-size: 11px; text-decoration: none;">
+                Start Learning
+            </a>
+        </div>
+
+        <!-- Registered Vehicles Spreadsheet -->
+        <div class="space-y-4">
+            <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary);">Your Registered Vehicles</h3>
+            <div class="table-wrapper">
+                <table class="spreadsheet" id="owner-vehicles-table">
+                    <thead>
+                        <tr>
+                            <th>Vehicle Plate</th>
+                            <th>Model Type</th>
+                            <th>Owner Name</th>
+                            <th>Status Log</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamically filled -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TRAFFIC OFFICER WORKSPACE -->
+    {% if user.role == "TRAFFIC_OFFICER" %}
+    <div id="officer-workspace" style="display: none;" class="space-y">
+        <div class="grid-grid" style="display: grid; grid-template-cols: 1fr; gap: 32px; @media (min-width: 992px) { grid-template-cols: 5fr 7fr; }">
+            
+            <!-- Upload Console -->
+            <div class="glass-panel" style="padding: 28px; background: var(--card-bg); text-align: left; display: flex; flex-direction: column; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 800;">Traffic Offence Camera Console</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); mt-4px;">Upload traffic evidence frame (Image or Video) to run Gemini 3.5 Flash inference and plate character recognition.</p>
+                </div>
+                
+                <form id="upload-form" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Evidence Image File</label>
+                        <div class="input-wrapper">
+                            <input type="file" id="evidence-file" accept="image/*" required style="width: 100%; font-size: 12px; border: 1px dashed var(--border-color); padding: 32px; border-radius: 16px; background: var(--background); cursor: pointer; text-align: center;">
+                        </div>
+                    </div>
+                    <button type="submit" id="upload-submit-btn" class="btn-card btn-card-primary" style="width: 100%; padding: 12px;">
+                        Upload & Detect Violation
+                    </button>
+                </form>
+            </div>
+
+            <!-- Upload Preview and Diagnostics Logs -->
+            <div class="glass-panel" style="padding: 28px; background: var(--card-bg); text-align: left; display: flex; flex-direction: column; justify-content: center; min-height: 280px;" id="upload-preview-container">
+                <div id="upload-idle-state" style="text-align: center; color: var(--text-tertiary); display: flex; flex-direction: column; gap: 12px; align-items: center;">
+                    <i data-lucide="upload-cloud" style="width: 44px; height: 44px; stroke-width: 1.5;"></i>
+                    <h4 style="font-size: 13px; font-weight: 800; color: var(--text-secondary);">No file uploaded yet</h4>
+                    <p style="font-size: 11px; max-width: 280px; margin: 0 auto; line-height: 1.4;">Submit an evidence file using the camera console on the left to resolve diagnostic outputs.</p>
+                </div>
+                
+                <!-- Results layout -->
+                <div id="upload-results-state" style="display: none;" class="space-y">
+                    <h3 style="font-size: 15px; font-weight: 800; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; color: var(--primary);">
+                        AI Inference Diagnosis Success
+                    </h3>
+                    <div style="display: grid; grid-template-cols: 1fr; gap: 20px; @media (min-width: 576px) { grid-template-cols: 1fr 1fr; }">
+                        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); height: 160px;">
+                            <img id="res-evidence-img" src="" alt="Uploaded evidence" style="width: 100%; h: 100%; object-fit: cover;">
+                        </div>
+                        <div style="font-family: monospace; font-size: 10px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                                <span>PLATE OCR:</span>
+                                <span style="font-weight: 700;" id="res-plate">MH12AB1234</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                                <span>INFRACTION:</span>
+                                <span style="font-weight: 700; color: var(--primary);" id="res-violation">HELMET_VIOLATION</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                                <span>CONFIDENCE:</span>
+                                <span id="res-confidence">96%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+                                <span>OWNER:</span>
+                                <span id="res-owner">Rohan Sharma</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- SYSTEM ADMIN WORKSPACE -->
+    {% if user.role == "ADMIN" %}
+    <div id="admin-workspace" style="display: none;" class="space-y">
+        <div class="metrics-row">
+            <div class="metric-card">
+                <h4>Pending Fine Ledgers</h4>
+                <div class="value" id="admin-stat-unpaid">₹0.00</div>
+                <div class="change down" id="admin-stat-count-unpaid"><i data-lucide="alert-triangle"></i> 0 Unresolved</div>
+            </div>
+            <div class="metric-card">
+                <h4>Total Settled Fines</h4>
+                <div class="value" id="admin-stat-paid">₹0.00</div>
+                <div class="change up" id="admin-stat-count-paid"><i data-lucide="check-circle"></i> 0 Resolved</div>
+            </div>
+            <div class="metric-card">
+                <h4>Registered Vehicles</h4>
+                <div class="value" id="admin-stat-vehicles">0</div>
+                <div class="change up" style="color: var(--info);"><i data-lucide="car"></i> Database Count</div>
+            </div>
+            <div class="metric-card">
+                <h4>Total Users</h4>
+                <div class="value" id="admin-stat-users">0</div>
+                <div class="change up" style="color: var(--success);"><i data-lucide="user-check"></i> Registered Profiles</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- RECENT VIOLATIONS LIST (SHARED) -->
+    <div class="space-y-4" id="recent-violations-block" style="display: none;">
+        <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary);">Recent Traffic Infractions</h3>
+        <div class="table-wrapper">
+            <table class="spreadsheet" id="recent-violations-table">
+                <thead>
+                    <tr>
+                        <th>Challan ID</th>
+                        <th>Vehicle Plate</th>
+                        <th>Infraction Type</th>
+                        <th>Fine Amount</th>
+                        <th>Issued Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dynamically populated -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const userRole = "{{ user.role }}";
+    
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            await loadDashboardData();
+        } catch (e) {
+            console.error(e);
+        }
+    });
+
+    async function loadDashboardData() {
+        document.getElementById("dashboard-loading").style.display = "flex";
+        
+        try {
+            if (userRole === "VEHICLE_OWNER") {
+                const stats = await apiRequest("/api/analytics/owner");
+                
+                document.getElementById("owner-stat-unpaid").innerText = `₹${stats.pending_fine_amount}.00`;
+                document.getElementById("owner-stat-paid").innerText = `₹${stats.paid_fine_amount}.00`;
+                document.getElementById("owner-stat-xp").innerText = `${stats.citizen_xp} XP`;
+                document.getElementById("owner-stat-badges").innerText = stats.badges_count;
+                document.getElementById("owner-stat-count-unpaid").innerHTML = `<i data-lucide="alert-triangle"></i> ${stats.pending_challans_count} Pending`;
+                
+                // Show banner if unpaid challans exist
+                if (stats.pending_challans_count > 0) {
+                    document.getElementById("unpaid-banner").style.display = "flex";
+                }
+                
+                // Load owner registered vehicles list
+                const vehicles = await apiRequest("/api/vehicles");
+                const tbody = document.querySelector("#owner-vehicles-table tbody");
+                tbody.innerHTML = "";
+                
+                if (vehicles.vehicles && vehicles.vehicles.length > 0) {
+                    vehicles.vehicles.forEach(v => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td><strong style="font-family: monospace; font-size: 13px;">${v.vehicle_number}</strong></td>
+                            <td>${v.vehicle_type}</td>
+                            <td>${v.owner_name}</td>
+                            <td><span class="badge-status status-paid" style="color: var(--success); border-color: rgba(16,185,129,0.15); background: rgba(16,185,129,0.05);">✓ Active</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No vehicles registered on your profile.</td></tr>`;
+                }
+                
+                document.getElementById("owner-workspace").style.display = "block";
+                
+            } else if (userRole === "TRAFFIC_OFFICER") {
+                // Officer view doesn't load stats, displays shutter upload
+                document.getElementById("officer-workspace").style.display = "block";
+                
+            } else if (userRole === "ADMIN") {
+                const stats = await apiRequest("/api/analytics/admin");
+                
+                document.getElementById("admin-stat-unpaid").innerText = `₹${stats.pending_revenue}.00`;
+                document.getElementById("admin-stat-paid").innerText = `₹${stats.paid_revenue}.00`;
+                document.getElementById("admin-stat-vehicles").innerText = stats.total_vehicles;
+                document.getElementById("admin-stat-users").innerText = stats.total_users;
+                document.getElementById("admin-stat-count-unpaid").innerHTML = `<i data-lucide="alert-triangle"></i> ${stats.pending_violations_count} Unresolved`;
+                document.getElementById("admin-stat-count-paid").innerHTML = `<i data-lucide="check-circle"></i> ${stats.paid_violations_count} Resolved`;
+                
+                document.getElementById("admin-workspace").style.display = "block";
+            }
+            
+            // Load Recent Violations (shared across all dashboards)
+            const violationsRes = await apiRequest("/api/violations?limit=5");
+            const vBody = document.querySelector("#recent-violations-table tbody");
+            vBody.innerHTML = "";
+            
+            if (violationsRes.violations && violationsRes.violations.length > 0) {
+                violationsRes.violations.forEach(v => {
+                    const dateStr = new Date(v.timestamp).toLocaleDateString();
+                    const statusClass = v.status === "PAID" ? "status-paid" : (v.status === "OVERDUE" ? "status-overdue" : "status-pending");
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><strong style="font-family: monospace; font-size: 11px;">${v.challan_id}</strong></td>
+                        <td><strong style="font-family: monospace; font-size: 13px;">${v.vehicle_number}</strong></td>
+                        <td><span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${v.violation_type.replace('_', ' ')}</span></td>
+                        <td style="font-family: monospace; font-weight: 700;">₹${v.final_amount}.00</td>
+                        <td>${dateStr}</td>
+                        <td><span class="badge-status ${statusClass}">${v.status}</span></td>
+                    `;
+                    vBody.appendChild(tr);
+                });
+                document.getElementById("recent-violations-block").style.display = "block";
+            } else {
+                vBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No violations recorded.</td></tr>`;
+            }
+            
+        } catch (error) {
+            console.error("Dashboard error:", error);
+        } finally {
+            document.getElementById("dashboard-loading").style.display = "none";
+            // Redraw icons
+            lucide.createIcons();
+        }
+    }
+
+    // Officer Upload Form Handler
+    const uploadForm = document.getElementById("upload-form");
+    if (uploadForm) {
+        const fileInput = document.getElementById("evidence-file");
+        const submitBtn = document.getElementById("upload-submit-btn");
+        const idleState = document.getElementById("upload-idle-state");
+        const resultsState = document.getElementById("upload-results-state");
+        
+        uploadForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const files = fileInput.files;
+            if (!files || files.length === 0) return;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Analyzing Evidence (Gemini 3.5)...";
+            
+            const file = files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            try {
+                const res = await apiRequest("/api/violations/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                // Set result visuals
+                document.getElementById("res-evidence-img").src = `/uploads/${res.violation_image_path.split('/').pop()}`;
+                document.getElementById("res-plate").innerText = res.vehicle_number;
+                document.getElementById("res-violation").innerText = res.violation_type;
+                document.getElementById("res-confidence").innerText = `${(res.confidence_score * 100).toFixed(0)}%`;
+                document.getElementById("res-owner").innerText = res.owner_name || "Unassigned";
+                
+                idleState.style.display = "none";
+                resultsState.style.display = "block";
+                
+                // Reload dashboard recent records list
+                await loadDashboardData();
+            } catch (err) {
+                alert(err.message || "Failed to analyze evidence.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Upload & Detect Violation";
+            }
+        });
+    }
+</script>
+{% endblock %}

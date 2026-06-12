@@ -1,0 +1,372 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}User Accounts - RoadPay AI{% endblock %}
+
+{% block dashboard_content %}
+<div class="space-y" style="display: flex; flex-direction: column; gap: 32px; text-align: left;">
+    
+    <!-- Header Block -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <span class="section-tag">Security Console</span>
+            <h2 class="section-title">User Accounts</h2>
+            <p class="section-desc">Manage system access roles, verify email logins, reset profiles, and suspend user accounts.</p>
+        </div>
+        
+        <div>
+            <button onclick="openAddModal()" class="btn-card btn-card-primary" style="font-size: 11px; padding: 10px 16px;">
+                <i data-lucide="user-plus"></i> Add Account
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading / Spreadsheet Table States -->
+    <div id="users-loading" class="flex-align" style="display: flex; align-items: center; justify-content: center; min-height: 200px; gap: 8px;">
+        <i data-lucide="loader" class="animate-spin text-rose-500"></i>
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Loading accounts...</span>
+    </div>
+
+    <div id="users-content" class="space-y" style="display: none;">
+        <div class="table-wrapper">
+            <table class="spreadsheet" id="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email Login</th>
+                        <th>System Role</th>
+                        <th>Status</th>
+                        <th>Created Date</th>
+                        <th style="text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="add-modal" style="z-index: 500;">
+    <div class="modal-card" style="max-width: 440px; width: 90%; background: var(--card-bg);">
+        <div class="modal-header">
+            <h4 style="font-size: 15px; font-weight: 800;">Create User Account</h4>
+            <button onclick="closeAddModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <form id="add-form" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; text-align: left;">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="add-name" class="form-input" placeholder="e.g. John Doe" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="add-email" class="form-input" placeholder="email@roadpay.ai" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="add-password" class="form-input" placeholder="Password (min 6 chars)" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">System Role</label>
+                <select id="add-role" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="VEHICLE_OWNER">Vehicle Owner (Citizen)</option>
+                    <option value="TRAFFIC_OFFICER">Traffic Officer</option>
+                    <option value="ADMIN">System Administrator</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 8px;">
+                <button type="button" onclick="closeAddModal()" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                    Cancel
+                </button>
+                <button type="submit" id="add-submit-btn" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px;">
+                    Create Profile
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="edit-modal" style="z-index: 500;">
+    <div class="modal-card" style="max-width: 440px; width: 90%; background: var(--card-bg);">
+        <div class="modal-header">
+            <h4 style="font-size: 15px; font-weight: 800;">Edit User Account</h4>
+            <button onclick="closeEditModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <form id="edit-form" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; text-align: left;">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="edit-name" class="form-input" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="edit-email" class="form-input" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">System Role</label>
+                <select id="edit-role" class="form-input" style="padding: 10px 12px; font-size: 12px; appearance: auto; background-image: none;">
+                    <option value="VEHICLE_OWNER">Vehicle Owner (Citizen)</option>
+                    <option value="TRAFFIC_OFFICER">Traffic Officer</option>
+                    <option value="ADMIN">System Administrator</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 8px;">
+                <button type="button" onclick="closeEditModal()" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                    Cancel
+                </button>
+                <button type="submit" id="edit-submit-btn" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px;">
+                    Save Profile
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-overlay" id="password-modal" style="z-index: 500;">
+    <div class="modal-card" style="max-width: 400px; width: 90%; background: var(--card-bg);">
+        <div class="modal-header">
+            <h4 style="font-size: 15px; font-weight: 800;">Reset Account Password</h4>
+            <button onclick="closePasswordModal()" class="btn-icon" style="padding: 4px;"><i data-lucide="x"></i></button>
+        </div>
+        <form id="password-form" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; text-align: left;">
+            <div>
+                <span style="font-size: 11px; color: var(--text-secondary);">Enter a new password for user account <strong id="pwd-modal-email">email@roadpay.ai</strong>.</span>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" id="pwd-input" class="form-input" placeholder="New Password" required style="padding: 10px 12px 10px 12px; font-size: 12px;">
+            </div>
+
+            <div style="display: flex; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 8px;">
+                <button type="button" onclick="closePasswordModal()" class="btn-card btn-card-secondary" style="flex: 1; font-size: 11px;">
+                    Cancel
+                </button>
+                <button type="submit" id="pwd-submit-btn" class="btn-card btn-card-primary" style="flex: 1; font-size: 11px;">
+                    Change Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeUsers = [];
+    let selectedUserId = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadUsers();
+
+        // Add user submit
+        document.getElementById("add-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById("add-submit-btn");
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Creating...";
+
+            const payload = {
+                name: document.getElementById("add-name").value,
+                email: document.getElementById("add-email").value,
+                password: document.getElementById("add-password").value,
+                role: document.getElementById("add-role").value
+            };
+
+            try {
+                await apiRequest("/api/users", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                alert("Account created successfully.");
+                closeAddModal();
+                loadUsers();
+            } catch (err) {
+                alert(err.message || "Failed to create user account.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Create Profile";
+            }
+        });
+
+        // Edit user submit
+        document.getElementById("edit-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!selectedUserId) return;
+
+            const submitBtn = document.getElementById("edit-submit-btn");
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving...";
+
+            const payload = {
+                name: document.getElementById("edit-name").value,
+                email: document.getElementById("edit-email").value,
+                role: document.getElementById("edit-role").value
+            };
+
+            try {
+                await apiRequest(`/api/users/${selectedUserId}`, {
+                    method: "PUT",
+                    body: JSON.stringify(payload)
+                });
+                alert("Account updated successfully.");
+                closeEditModal();
+                loadUsers();
+            } catch (err) {
+                alert(err.message || "Failed to update profile.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Save Profile";
+            }
+        });
+
+        // Reset password submit
+        document.getElementById("password-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!selectedUserId) return;
+
+            const submitBtn = document.getElementById("pwd-submit-btn");
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Resetting...";
+
+            const newPwd = document.getElementById("pwd-input").value;
+
+            try {
+                await apiRequest(`/api/users/${selectedUserId}/reset-password?new_password=${encodeURIComponent(newPwd)}`, {
+                    method: "POST"
+                });
+                alert("Password changed successfully.");
+                closePasswordModal();
+            } catch (err) {
+                alert(err.message || "Failed to change password.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Change Password";
+            }
+        });
+    });
+
+    async function loadUsers() {
+        const loading = document.getElementById("users-loading");
+        const content = document.getElementById("users-content");
+
+        loading.style.display = "flex";
+        content.style.display = "none";
+
+        try {
+            const data = await apiRequest("/api/users");
+            activeUsers = data;
+
+            const tbody = document.querySelector("#users-table tbody");
+            tbody.innerHTML = "";
+
+            data.forEach(u => {
+                const dateStr = new Date(u.created_at).toLocaleDateString();
+                const statusClass = u.status === "ACTIVE" ? "status-paid" : "status-overdue";
+                
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong style="font-family: monospace; font-size: 11px;">${u.id}</strong></td>
+                    <td>${u.name}</td>
+                    <td><strong>${u.email}</strong></td>
+                    <td><span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${u.role.replace('_', ' ')}</span></td>
+                    <td><span class="badge-status ${statusClass}">${u.status}</span></td>
+                    <td>${dateStr}</td>
+                    <td style="text-align: center; display: flex; justify-content: center; gap: 8px;">
+                        <button onclick="openEditModal(${JSON.stringify(u).replace(/"/g, '&quot;')})" class="btn-icon" style="padding: 4px;" title="Edit Profile"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i></button>
+                        <button onclick="openPasswordModal(${JSON.stringify(u).replace(/"/g, '&quot;')})" class="btn-icon" style="padding: 4px; color: var(--info); border-color: rgba(6,182,212,0.15);" title="Reset Password"><i data-lucide="key" style="width: 12px; height: 12px;"></i></button>
+                        <button onclick="toggleUserStatus(${u.id}, '${u.status}')" class="btn-icon" style="padding: 4px; ${u.status === 'ACTIVE' ? 'color: var(--warning); border-color: rgba(245,158,11,0.15);' : 'color: var(--success); border-color: rgba(16,185,129,0.15);'}" title="${u.status === 'ACTIVE' ? 'Suspend Account' : 'Activate Account'}">
+                            <i data-lucide="${u.status === 'ACTIVE' ? 'user-x' : 'user-check'}" style="width: 12px; height: 12px;"></i>
+                        </button>
+                        <button onclick="deleteUser(${u.id})" class="btn-icon" style="padding: 4px; color: var(--primary); border-color: rgba(244,63,94,0.15);" title="Delete Profile"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            content.style.display = "block";
+        } catch (err) {
+            console.error(err);
+        } finally {
+            loading.style.display = "none";
+            lucide.createIcons();
+        }
+    }
+
+    function openAddModal() {
+        document.getElementById("add-name").value = "";
+        document.getElementById("add-email").value = "";
+        document.getElementById("add-password").value = "";
+        document.getElementById("add-role").value = "VEHICLE_OWNER";
+        document.getElementById("add-modal").classList.add("open");
+    }
+
+    function closeAddModal() {
+        document.getElementById("add-modal").classList.remove("open");
+    }
+
+    function openEditModal(u) {
+        selectedUserId = u.id;
+        document.getElementById("edit-name").value = u.name;
+        document.getElementById("edit-email").value = u.email;
+        document.getElementById("edit-role").value = u.role;
+        document.getElementById("edit-modal").classList.add("open");
+    }
+
+    function closeEditModal() {
+        document.getElementById("edit-modal").classList.remove("open");
+        selectedUserId = null;
+    }
+
+    function openPasswordModal(u) {
+        selectedUserId = u.id;
+        document.getElementById("pwd-modal-email").innerText = u.email;
+        document.getElementById("pwd-input").value = "";
+        document.getElementById("password-modal").classList.add("open");
+    }
+
+    function closePasswordModal() {
+        document.getElementById("password-modal").classList.remove("open");
+        selectedUserId = null;
+    }
+
+    async function toggleUserStatus(userId, currentStatus) {
+        const nextStatus = currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+        try {
+            await apiRequest(`/api/users/${userId}/status?status_in=${nextStatus}`, {
+                method: "POST"
+            });
+            alert(`User status updated to ${nextStatus}.`);
+            loadUsers();
+        } catch (err) {
+            alert(err.message || "Failed to toggle status.");
+        }
+    }
+
+    async function deleteUser(userId) {
+        if (!confirm("Are you sure you want to permanently delete this user account?")) return;
+
+        try {
+            await apiRequest(`/api/users/${userId}`, {
+                method: "DELETE"
+            });
+            alert("Account deleted.");
+            loadUsers();
+        } catch (err) {
+            alert(err.message || "Failed to delete account.");
+        }
+    }
+</script>
+{% endblock %}
