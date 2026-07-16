@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED 1
 # Install system dependencies for OCR & graphics processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libgomp1 \
     libmagic1 \
