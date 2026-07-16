@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: roadpay_db
+    restart: always
+    environment:
+      POSTGRES_USER: roadpay_user
+      POSTGRES_PASSWORD: roadpay_secure_password
+      POSTGRES_DB: roadpay
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - roadpay_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: roadpay_backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://roadpay_user:roadpay_secure_password@db:5432/roadpay
+      - JWT_SECRET_KEY=change_this_to_a_secure_random_key_string
+      - GEMINI_API_KEY=your_gemini_api_key_here
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=your_email@gmail.com
+      - SMTP_PASSWORD=your_smtp_app_password
+      - RAZORPAY_KEY_ID=your_razorpay_key_id
+      - RAZORPAY_SECRET=your_razorpay_secret
+      - CORS_ALLOWED_ORIGINS=https://roadpay.yourdomain.com,http://localhost:3000
+      - FRONTEND_URL=https://roadpay.yourdomain.com
+    volumes:
+      # Maps local media uploads and PDF challans directories to docker volumes
+      - backend_uploads:/app/app/data/uploads
+      - backend_challans:/app/app/data/challans
+    networks:
+      - roadpay_net
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://roadpay-api.yourdomain.com/api
+    container_name: roadpay_frontend
+    restart: always
+    networks:
+      - roadpay_net
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: roadpay_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - roadpay_net
+
+volumes:
+  pgdata:
+  backend_uploads:
+  backend_challans:
+  caddy_data:
+  caddy_config:
+
+networks:
+  roadpay_net:
+    driver: bridge

@@ -91,40 +91,33 @@ async def test_smtp(
     return {"status": "success", "message": "SMTP connection test passed."}
 
 @router.post("/test-gemini")
-def test_gemini(
+async def test_gemini(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
-    s = get_or_create_settings(db)
-    key = s.gemini_api_key
-    if not key:
-         raise HTTPException(status_code=400, detail="Gemini API key is not configured.")
+    url = os.getenv("LOCAL_LLM_URL", "http://127.0.0.1:11434")
+    if url.endswith("/v1"):
+        url = url[:-3]
+    elif url.endswith("/v1/"):
+        url = url[:-4]
+    model = os.getenv("LOCAL_LLM_MODEL", "smallthinker:latest")
     try:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=key)
-        # Try in priority order matching ai_service.py
-        models = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash']
-        last_error = None
-        for model in models:
-            try:
-                response = client.models.generate_content(
-                    model=model,
-                    contents="Ping",
-                    config=types.GenerateContentConfig(max_output_tokens=10)
-                )
-                return {"status": "success", "message": f"Gemini connection test passed successfully using model {model}."}
-            except Exception as e:
-                err_msg = str(e)
-                if any(x in err_msg.lower() for x in ["429", "rate limit", "quota", "resource_exhausted", "503"]):
-                    last_error = e
-                    continue
-                else:
-                    raise e
-        if last_error:
-            return {"status": "success", "message": "Gemini connection test passed (All model quotas exhausted, but authenticated successfully)."}
+        with httpx.Client(timeout=30.0, trust_env=False) as client:
+            response = client.post(
+                f"{url}/api/chat",
+                json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": "Ping"}],
+                    "stream": False
+                },
+                headers={"Content-Type": "application/json"}
+            )
+            if response.status_code == 200:
+                return {"status": "success", "message": f"Local LLM connection test passed successfully using model {model}."}
+            else:
+                raise HTTPException(status_code=400, detail=f"Local LLM status {response.status_code}. Verify model '{model}' is pulled.")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Gemini test failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Local LLM test failed: {str(e)}. Ensure Ollama is running and '{model}' is pulled.")
 
 @router.post("/test-razorpay")
 def test_razorpay(

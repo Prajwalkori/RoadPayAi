@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models import Violation, Vehicle, User, PDFChallan, Payment, EmailLog, Reminder, QuizAttempt
 from app.schemas import ViolationResponse, PaginatedViolations
 from app.auth import require_officer, require_admin, get_current_user
-from app.services.ai_service import analyze_violation_image, generate_email_content
+from app.services.ai_service import analyze_violation_image, generate_email_content, normalize_plate
 from app.services.pdf_service import generate_challan_pdf
 from app.services.email_service import send_challan_email
 from app.services.scheduler_service import update_violations_penalties
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/violations", tags=["violations"])
 
 UPLOAD_DIR = "app/data/uploads"
 PDF_DIR = "app/data/challans"
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # Ensure data folders exist
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -90,6 +91,54 @@ def get_violation_detail(
             
     return violation
 
+def fuzzy_match_plate(ocr_plate: str, db: Session) -> Optional[Vehicle]:
+    """
+    Compares the OCR-extracted plate against all registered vehicles in the database,
+    accounting for common OCR reading errors (e.g. '5' instead of 'S', 'D' instead of '0').
+    """
+    if not ocr_plate:
+        return None
+        
+    def signature(p: str) -> str:
+        s = p.upper().replace(" ", "").replace("-", "").replace(".", "")
+        repl = {
+            '5': 'S', '0': 'O', '1': 'I', '8': 'B', '2': 'Z',
+            'D': 'O', 'B': '8', 'A': '4', 'G': '6'
+        }
+        return "".join(repl.get(c, c) for c in s)
+        
+    ocr_sig = signature(ocr_plate)
+    if len(ocr_sig) < 3:
+        return None
+        
+    all_vehicles = db.query(Vehicle).filter(Vehicle.deleted_at == None).all()
+    
+    best_vehicle = None
+    best_score = 0.0
+    
+    from difflib import SequenceMatcher
+    
+    for v in all_vehicles:
+        reg_sig = signature(v.vehicle_number)
+        
+        # Check if one is substring of the other (for partial OCR cuts)
+        if ocr_sig in reg_sig or reg_sig in ocr_sig:
+            score = min(len(ocr_sig), len(reg_sig)) / max(len(ocr_sig), len(reg_sig))
+            if score > best_score:
+                best_score = score
+                best_vehicle = v
+        else:
+            ratio = SequenceMatcher(None, ocr_sig, reg_sig).ratio()
+            if ratio > best_score:
+                best_score = ratio
+                best_vehicle = v
+                
+    if best_score >= 0.4:
+        print(f"[Registry Lookup] Python Fuzzy Match: '{best_vehicle.vehicle_number}' matches OCR '{ocr_plate}' with score {best_score:.2f}")
+        return best_vehicle
+        
+    return None
+
 @router.post("/upload")
 async def upload_traffic_evidence(
     file: UploadFile = File(...),
@@ -123,15 +172,44 @@ async def upload_traffic_evidence(
         }
 
     # 3. Resolve vehicle plate and owner
-    detected_plate = analysis.get("vehicle_number", "").strip().upper()
+    raw_plate = analysis.get("vehicle_number") or ""
+    detected_plate = normalize_plate(raw_plate)  # strip spaces/hyphens, uppercase
     violation_type = analysis.get("violation_type")
     confidence = analysis.get("confidence_score", 0.90)
     explanation = analysis.get("explanation", "Dangerous traffic maneuver detected.")
-    
-    # Check if number plate in registry
+
+    print(f"[Registry Lookup] Normalized plate: '{detected_plate}'")
+
+    # Check if number plate in registry — exact match first
     vehicle = None
+    ocr_plate_original = detected_plate  # preserve for logging
+
     if detected_plate:
-        vehicle = db.query(Vehicle).filter(Vehicle.vehicle_number == detected_plate, Vehicle.deleted_at == None).first()
+        vehicle = db.query(Vehicle).filter(
+            Vehicle.vehicle_number == detected_plate,
+            Vehicle.deleted_at == None
+        ).first()
+
+        # Fuzzy fallback: handles 1-2 char OCR errors at the edges
+        if not vehicle and len(detected_plate) >= 6:
+            vehicle = db.query(Vehicle).filter(
+                Vehicle.vehicle_number.ilike(f"%{detected_plate[2:]}%"),
+                Vehicle.deleted_at == None
+            ).first()
+            if vehicle:
+                print(f"[Registry Lookup] Fuzzy match: '{vehicle.vehicle_number}' for OCR '{detected_plate}'")
+                detected_plate = vehicle.vehicle_number
+
+        # Advanced Python Fuzzy fallback: handles character replacements, substrings, and OCR confusions
+        if not vehicle:
+            vehicle = fuzzy_match_plate(detected_plate, db)
+            if vehicle:
+                print(f"[Registry Lookup] Advanced Fuzzy match: '{vehicle.vehicle_number}' for OCR '{detected_plate}'")
+                detected_plate = vehicle.vehicle_number
+
+
+
+    print(f"[Registry Lookup] Owner resolved: {vehicle.owner_name if vehicle else 'NOT FOUND'}")
 
     # Create dynamic Challan ID
     challan_id = f"RP-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:5].upper()}"
@@ -174,8 +252,8 @@ async def upload_traffic_evidence(
             "status": "PENDING",
             "explanation": explanation,
             "violation_image_path": local_path,
-            "payment_url": f"http://localhost:3000/dashboard/violations", # Direct lookup
-            "learning_link": f"http://localhost:3000/dashboard/learning?violation_id={violation.id}"
+            "payment_url": f"{FRONTEND_URL}/dashboard/violations", # Direct lookup
+            "learning_link": f"{FRONTEND_URL}/dashboard/learning?violation_id={violation.id}"
         }
         pdf_path = generate_challan_pdf(pdf_details, PDF_DIR)
         
@@ -222,10 +300,10 @@ def assign_unassigned_violation(
     if not violation:
         raise HTTPException(status_code=404, detail="Violation record not found")
         
-    plate = vehicle_number.strip().upper()
+    plate = normalize_plate(vehicle_number)  # strips spaces, hyphens, uppercases
     vehicle = db.query(Vehicle).filter(Vehicle.vehicle_number == plate, Vehicle.deleted_at == None).first()
     if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle registration not found in records")
+        raise HTTPException(status_code=404, detail=f"Vehicle {plate} not found in registry. Ensure plate is registered first.")
 
     violation.vehicle_number = plate
     violation.status = "PENDING"
@@ -244,8 +322,8 @@ def assign_unassigned_violation(
         "status": "PENDING",
         "explanation": violation.explanation,
         "violation_image_path": violation.violation_image_path,
-        "payment_url": f"http://localhost:3000/dashboard/violations",
-        "learning_link": f"http://localhost:3000/dashboard/learning?violation_id={violation.id}"
+        "payment_url": f"{FRONTEND_URL}/dashboard/violations",
+        "learning_link": f"{FRONTEND_URL}/dashboard/learning?violation_id={violation.id}"
     }
     
     pdf_path = generate_challan_pdf(pdf_details, PDF_DIR)
@@ -435,8 +513,8 @@ async def officer_resend_violation_email(
         "status": violation.status,
         "explanation": violation.explanation,
         "violation_image_path": violation.violation_image_path or "",
-        "payment_url": f"http://localhost:3000/dashboard/violations",
-        "learning_link": f"http://localhost:3000/dashboard/learning?violation_id={violation.id}"
+        "payment_url": f"{FRONTEND_URL}/dashboard/violations",
+        "learning_link": f"{FRONTEND_URL}/dashboard/learning?violation_id={violation.id}"
     }
     
     # Look up existing PDF path from DB

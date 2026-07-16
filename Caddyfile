@@ -1,0 +1,7 @@
+roadpay.yourdomain.com {
+    reverse_proxy frontend:3000
+}
+
+roadpay-api.yourdomain.com {
+    reverse_proxy backend:8000
+}

@@ -1,4 +1,5 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const MEDIA_BASE = BASE_URL.endsWith("/api") ? BASE_URL.substring(0, BASE_URL.length - 4) : BASE_URL;
 
 export interface UserToken {
   access_token: string;
@@ -86,14 +87,14 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}): P
 }
 
 export function getFileUrl(path: string): string {
-  // If absolute path like app/data/uploads/abc.png, convert to http://localhost:8000/uploads/abc.png
+  // If absolute path like app/data/uploads/abc.png, convert to dynamic backend uploads/challans prefix
   if (!path) return "";
   const cleaned = path.replace(/\\/g, "/");
   if (cleaned.includes("app/data/uploads/")) {
-    return `http://localhost:8000/uploads/${cleaned.split("app/data/uploads/")[1]}`;
+    return `${MEDIA_BASE}/uploads/${cleaned.split("app/data/uploads/")[1]}`;
   }
   if (cleaned.includes("app/data/challans/")) {
-    return `http://localhost:8000/challans/${cleaned.split("app/data/challans/")[1]}`;
+    return `${MEDIA_BASE}/challans/${cleaned.split("app/data/challans/")[1]}`;
   }
   return path;
 }
